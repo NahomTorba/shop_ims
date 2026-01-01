@@ -54,3 +54,27 @@ class Supplier {
     };
   }
 }
+
+class Category {
+  final int? id;
+  final String name;
+  final String? description;
+
+  Category({this.id, required this.name, this.description});
+
+  factory Category.fromMap(Map<String, dynamic> map) {
+    return Category(
+      id: map['Category_ID'],
+      name: map['Category_Name'],
+      description: map['Description'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'Category_ID': id,
+      'Category_Name': name,
+      'Description': description,
+    };
+  }
+}
