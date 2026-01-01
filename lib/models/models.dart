@@ -78,3 +78,63 @@ class Category {
     };
   }
 }
+
+class Product {
+  final int? id;
+  final String name;
+  final String? description;
+  final double purchasePrice;
+  final double salePrice;
+  final int stockQuantity;
+  final String? productCode;
+  final String? expirationDate;
+  final int lowStockThreshold;
+  final int? categoryId;
+  final int? supplierId;
+
+  Product({
+    this.id,
+    required this.name,
+    this.description,
+    required this.purchasePrice,
+    required this.salePrice,
+    required this.stockQuantity,
+    this.productCode,
+    this.expirationDate,
+    this.lowStockThreshold = 5,
+    this.categoryId,
+    this.supplierId,
+  });
+
+  factory Product.fromMap(Map<String, dynamic> map) {
+    return Product(
+      id: map['Product_ID'],
+      name: map['Product_Name'],
+      description: map['Description'],
+      purchasePrice: map['Purchase_Price'],
+      salePrice: map['Sale_Price'],
+      stockQuantity: map['Stock_Quantity'],
+      productCode: map['Product_Code'],
+      expirationDate: map['Expiration_Date'],
+      lowStockThreshold: map['Low_Stock_Threshold'] ?? 5,
+      categoryId: map['Category_ID'],
+      supplierId: map['Supplier_ID'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'Product_ID': id,
+      'Product_Name': name,
+      'Description': description,
+      'Purchase_Price': purchasePrice,
+      'Sale_Price': salePrice,
+      'Stock_Quantity': stockQuantity,
+      'Product_Code': productCode,
+      'Expiration_Date': expirationDate,
+      'Low_Stock_Threshold': lowStockThreshold,
+      'Category_ID': categoryId,
+      'Supplier_ID': supplierId,
+    };
+  }
+}
