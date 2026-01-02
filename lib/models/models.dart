@@ -138,3 +138,43 @@ class Product {
     };
   }
 }
+
+class Sale {
+  final int? id;
+  final int productId;
+  final int quantitySold;
+  final double unitPrice;
+  final double totalPrice;
+  final String saleDate;
+
+  Sale({
+    this.id,
+    required this.productId,
+    required this.quantitySold,
+    required this.unitPrice,
+    required this.totalPrice,
+    required this.saleDate,
+  });
+
+  factory Sale.fromMap(Map<String, dynamic> map) {
+    return Sale(
+      id: map['Sale_ID'],
+      productId: map['Product_ID'],
+      quantitySold: map['Quantity_Sold'],
+      unitPrice: map['Unit_Price'],
+      totalPrice: map['Total_Price'],
+      saleDate: map['Sale_Date'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'Sale_ID': id,
+      'Product_ID': productId,
+      'Quantity_Sold': quantitySold,
+      'Unit_Price': unitPrice,
+      'Total_Price': totalPrice,
+      'Sale_Date': saleDate,
+    };
+  }
+}
