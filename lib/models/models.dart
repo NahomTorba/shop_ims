@@ -178,3 +178,44 @@ class Sale {
     };
   }
 }
+
+class Purchase {
+  final int? id;
+  final int productId;
+  final int quantityPurchased;
+  final double unitPrice;
+  final double totalPrice;
+  final String purchaseDate;
+
+  Purchase({
+    this.id,
+    required this.productId,
+    required this.quantityPurchased,
+    required this.unitPrice,
+    required this.totalPrice,
+    required this.purchaseDate,
+  });
+
+  factory Purchase.fromMap(Map<String, dynamic> map) {
+    return Purchase(
+      id: map['Purchase_ID'],
+      productId: map['Product_ID'],
+      quantityPurchased: map['Quantity_Purchased'],
+      unitPrice: map['Unit_Price'],
+      totalPrice: map['Total_Price'],
+      purchaseDate: map['Purchase_Date'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'Purchase_ID': id,
+      'Product_ID': productId,
+      'Quantity_Purchased': quantityPurchased,
+      'Unit_Price': unitPrice,
+      'Total_Price': totalPrice,
+      'Purchase_Date': purchaseDate,
+    };
+  }
+}
+
