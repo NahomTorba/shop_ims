@@ -219,3 +219,38 @@ class Purchase {
   }
 }
 
+class Transaction {
+  final int? id;
+  final String type;
+  final double amount;
+  final String date;
+  final String? description;
+
+  Transaction({
+    this.id,
+    required this.type,
+    required this.amount,
+    required this.date,
+    this.description,
+  });
+
+  factory Transaction.fromMap(Map<String, dynamic> map) {
+    return Transaction(
+      id: map['Transaction_ID'],
+      type: map['Type'],
+      amount: map['Amount'],
+      date: map['Date'],
+      description: map['Description'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'Transaction_ID': id,
+      'Type': type,
+      'Amount': amount,
+      'Date': date,
+      'Description': description,
+    };
+  }
+}
