@@ -32,7 +32,7 @@ class Supplier {
   final String? email;
   final String? address;
 
-  Supplier({this.id, required this.name, this.phone, this.email, this.address});
+  Supplier({this.id, required this.name,  this.phone, this.email, this.address});
 
   factory Supplier.fromMap(Map<String, dynamic> map) {
     return Supplier(
