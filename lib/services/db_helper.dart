@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:shop_ims/models/models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -38,6 +39,7 @@ class DatabaseHelper {
         User_ID INTEGER PRIMARY KEY AUTOINCREMENT,
         Full_Name TEXT NOT NULL,
         Email TEXT NOT NULL UNIQUE,
+        Password TEXT NOT NULL,
         Role TEXT NOT NULL
       )
     ''');
@@ -159,13 +161,13 @@ class DatabaseHelper {
     final db = await database;
     var result = await db.query(
       'User',
-      where: 'Email = ? AND Role = ?', // Use email and password to fetch the user
+      where: 'Email = ? AND Password = ?', // Use email and password to fetch the user
       whereArgs: [email, password],
     );
     if (result.isNotEmpty) {
-      return result.first;
+      return User.fromMap(result.first).toMap();
     } else {
-      return null; // No user found
+      return null; // show try again message or No user found
     }
   }
 
