@@ -181,3 +181,117 @@ class ProductDao {
     );
   }
 }
+
+class SaleDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Insert a sale
+  Future<int> insertSale(Sale sale) async {
+    final db = await _dbHelper.database;
+    return await db.insert('Sale', sale.toMap());
+  }
+
+  // Get all sales
+  Future<List<Sale>> getSales() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('Sale');
+    return result.map((json) => Sale.fromMap(json)).toList();
+  }
+
+  // Update a sale
+  Future<int> updateSale(Sale sale) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'Sale',
+      sale.toMap(),
+      where: 'Sale_ID = ?',
+      whereArgs: [sale.id],
+    );
+  }
+
+  // Delete a sale
+  Future<int> deleteSale(int id) async {
+    final db = await _dbHelper.database;
+    return await db.delete(
+      'Sale',
+      where: 'Sale_ID = ?',
+      whereArgs: [id],
+    );
+  }
+}
+
+class PurchaseDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Insert a purchase
+  Future<int> insertPurchase(Purchase purchase) async {
+    final db = await _dbHelper.database;
+    return await db.insert('Purchase', purchase.toMap());
+  }
+
+  // Get all purchases
+  Future<List<Purchase>> getPurchases() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('Purchase');
+    return result.map((json) => Purchase.fromMap(json)).toList();
+  }
+
+  // Update a purchase
+  Future<int> updatePurchase(Purchase purchase) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'Purchase',
+      purchase.toMap(),
+      where: 'Purchase_ID = ?',
+      whereArgs: [purchase.id],
+    );
+  }
+
+  // Delete a purchase
+  Future<int> deletePurchase(int id) async {
+    final db = await _dbHelper.database;
+    return await db.delete(
+      'Purchase',
+      where: 'Purchase_ID = ?',
+      whereArgs: [id],
+    );
+  }
+}
+
+class TransactionDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Insert a transaction
+  Future<int> insertTransaction(Transaction transaction) async {
+    final db = await _dbHelper.database;
+    return await db.insert('Transaction', transaction.toMap());
+  }
+
+  // Get all transactions
+  Future<List<Transaction>> getTransactions() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('Transaction');
+    return result.map((json) => Transaction.fromMap(json)).toList();
+  }
+
+  // Update a transaction
+  Future<int> updateTransaction(Transaction transaction) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'Transaction',
+      transaction.toMap(),
+      where: 'Transaction_ID = ?',
+      whereArgs: [transaction.id],
+    );
+  }
+
+  // Delete a transaction
+  Future<int> deleteTransaction(int id) async {
+    final db = await _dbHelper.database;
+    return await db.delete(
+      'Transaction',
+      where: 'Transaction_ID = ?',
+      whereArgs: [id],
+    );
+  }
+}
