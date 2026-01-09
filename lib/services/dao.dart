@@ -92,3 +92,92 @@ class SupplierDao {
   }
 }
 
+class CategoryDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Insert a category
+  Future<int> insertCategory(Category category) async {
+    final db = await _dbHelper.database;
+    return await db.insert('Category', category.toMap());
+  }
+
+  // Get all categories
+  Future<List<Category>> getCategories() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('Category');
+    return result.map((json) => Category.fromMap(json)).toList();
+  }
+
+  // Update a category
+  Future<int> updateCategory(Category category) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'Category',
+      category.toMap(),
+      where: 'Category_ID = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+  // Delete a category
+  Future<int> deleteCategory(int id) async {
+    final db = await _dbHelper.database;
+    return await db.delete(
+      'Category',
+      where: 'Category_ID = ?',
+      whereArgs: [id],
+    );
+  }
+}
+
+class ProductDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  // Insert a product
+  Future<int> insertProduct(Product product) async {
+    final db = await _dbHelper.database;
+    return await db.insert('Product', product.toMap());
+  }
+
+  // Get all products
+  Future<List<Product>> getProducts() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('Product');
+    return result.map((json) => Product.fromMap(json)).toList();
+  }
+
+  // Get product by ID
+  Future<Product?> getProductById(int id) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'Product',
+      where: 'Product_ID = ?',
+      whereArgs: [id],
+    );
+    if (result.isNotEmpty) {
+      return Product.fromMap(result.first);
+    }
+    return null;
+  }
+
+  // Update a product
+  Future<int> updateProduct(Product product) async {
+    final db = await _dbHelper.database;
+    return await db.update(
+      'Product',
+      product.toMap(),
+      where: 'Product_ID = ?',
+      whereArgs: [product.id],
+    );
+  }
+
+  // Delete a product
+  Future<int> deleteProduct(int id) async {
+    final db = await _dbHelper.database;
+    return await db.delete(
+      'Product',
+      where: 'Product_ID = ?',
+      whereArgs: [id],
+    );
+  }
+}
