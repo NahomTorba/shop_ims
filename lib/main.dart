@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shop_ims/pages/user_page.dart';
-import 'package:shop_ims/pages/user_page.dart';
+import 'package:shop_ims/pages/login_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: UserPage(),
+      home: LoginPage(),
     );
   }
 }
