@@ -258,30 +258,30 @@ class PurchaseDao {
   }
 }
 
-class TransactionDao {
+class TransactionsDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   // Insert a transaction
-  Future<int> insertTransaction(Transaction transaction) async {
+  Future<int> insertTransaction(Transactions transactions) async {
     final db = await _dbHelper.database;
-    return await db.insert('Transaction', transaction.toMap());
+    return await db.insert('Transaction', transactions.toMap());
   }
 
   // Get all transactions
-  Future<List<Transaction>> getTransactions() async {
+  Future<List<Transactions>> getTransactions() async {
     final db = await _dbHelper.database;
     final result = await db.query('Transaction');
-    return result.map((json) => Transaction.fromMap(json)).toList();
+    return result.map((json) => Transactions.fromMap(json)).toList();
   }
 
   // Update a transaction
-  Future<int> updateTransaction(Transaction transaction) async {
+  Future<int> updateTransaction(Transactions transactions) async {
     final db = await _dbHelper.database;
     return await db.update(
       'Transaction',
-      transaction.toMap(),
+      transactions.toMap(),
       where: 'Transaction_ID = ?',
-      whereArgs: [transaction.id],
+      whereArgs: [transactions.id],
     );
   }
 

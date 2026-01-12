@@ -109,9 +109,9 @@ class DatabaseHelper {
       )
     ''');
 
-    // Transaction table
+    // Transactions table
     batch.execute('''
-      CREATE TABLE Transaction (
+      CREATE TABLE Transactions (
         Transaction_ID INTEGER PRIMARY KEY AUTOINCREMENT,
         Type TEXT NOT NULL,
         Amount REAL NOT NULL,

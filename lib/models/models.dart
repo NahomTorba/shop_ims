@@ -222,14 +222,14 @@ class Purchase {
   }
 }
 
-class Transaction {
+class Transactions {
   final int? id;
   final String type;
   final double amount;
   final String date;
   final String? description;
 
-  Transaction({
+  Transactions({
     this.id,
     required this.type,
     required this.amount,
@@ -237,8 +237,8 @@ class Transaction {
     this.description,
   });
 
-  factory Transaction.fromMap(Map<String, dynamic> map) {
-    return Transaction(
+  factory Transactions.fromMap(Map<String, dynamic> map) {
+    return Transactions(
       id: map['Transaction_ID'],
       type: map['Type'],
       amount: map['Amount'],
