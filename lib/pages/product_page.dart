@@ -3,7 +3,7 @@ import 'package:shop_ims/models/models.dart';
 import 'package:shop_ims/services/dao.dart';
 
 class ProductPage extends StatefulWidget {
-  const ProductPage({super.key});
+  const ProductPage({super.key, required User user});
 
   @override
   State<ProductPage> createState() => _ProductPageState();

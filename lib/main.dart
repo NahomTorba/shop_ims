@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shop_ims/pages/login_page.dart';
+import 'package:shop_ims/services/db_helper.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseHelper.instance.createDefaultAdmin();
   runApp(const MyApp());
 }
 

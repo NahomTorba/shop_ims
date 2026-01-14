@@ -208,4 +208,25 @@ class DatabaseHelper {
       }
     });
   }
+
+  Future<void> createDefaultAdmin() async {
+  final db = await database;
+
+  final result = await db.query(
+    'User',
+    where: 'Email = ?',
+    whereArgs: ['admin@shop.com'],
+    limit: 1,
+  );
+
+  if (result.isEmpty) {
+    await db.insert('User', {
+      'Full_Name': 'Admin',
+      'Email': 'admin@shop.com',
+      'Password': 'admin123',
+      'Role': 'Admin',
+    });
+  }
+}
+
 }
