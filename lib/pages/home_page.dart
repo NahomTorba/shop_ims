@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shop_ims/pages/add_category_page.dart';
 import 'package:shop_ims/pages/add_product_page.dart';
-
+import 'package:shop_ims/pages/sale_page.dart'; // Import SalePage
+import 'package:shop_ims/services/dao.dart';
+import 'package:shop_ims/models/models.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,27 +15,142 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  
+  // DAOs
+  final ProductDao _productDao = ProductDao();
+  final SaleDao _saleDao = SaleDao();
+
+  // State variables for dashboard
+  int _totalItems = 0;
+  int _lowStockCount = 0;
+  double _invValue = 0.0;
+  int _salesTodayCount = 0;
+  double _salesTodayValue = 0.0;
+  double _profitToday = 0.0;
+  List<Sale> _recentSales = [];
+  Map<int, Product> _productCache = {}; // Cache for product details in recent activity
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final products = await _productDao.getProducts();
+      final sales = await _saleDao.getSales();
+      
+      // Calculate Total Items & Inventory Value
+      int totalItems = 0;
+      double invValue = 0;
+      int lowStock = 0;
+      
+      for (var p in products) {
+        totalItems += p.stockQuantity;
+        invValue += p.purchasePrice * p.stockQuantity;
+        if (p.stockQuantity <= p.lowStockThreshold) {
+          lowStock++;
+        }
+        if (p.id != null) {
+          _productCache[p.id!] = p;
+        }
+      }
+
+      // Calculate Today's Stats
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      int salesCount = 0;
+      double salesValue = 0;
+      double profit = 0;
+      List<Sale> todaysSalesList = [];
+
+      // Filter for recent sales (simplified: just showing last few sales)
+      // Ideally query with limit and order by in DAO
+      List<Sale> recentSales = List.from(sales);
+      recentSales.sort((a, b) => b.saleDate.compareTo(a.saleDate)); // Sort desc
+      
+      for (var s in sales) {
+        // Assuming Sale_Date is stored as ISO string or similar that contains yyyy-MM-dd
+        if (s.saleDate.startsWith(todayStr)) {
+          salesCount += s.quantitySold;
+          salesValue += s.totalPrice;
+          
+          final productKey = s.productId;
+          if (_productCache.containsKey(productKey)) {
+             final product = _productCache[productKey]!;
+             // Profit = (Unit Price - Cost Price) * Qty
+             // Note: This uses CURRENT cost price, which might differ from cost at time of purchase
+             profit += (s.unitPrice - product.purchasePrice) * s.quantitySold;
+          }
+          todaysSalesList.add(s);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalItems = totalItems;
+          _lowStockCount = lowStock;
+          _invValue = invValue;
+          _salesTodayCount = salesCount;
+          _salesTodayValue = salesValue;
+          _profitToday = profit;
+          _recentSales = recentSales.take(5).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dashboard data: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+  
+  void _onItemTapped(int index) {
+      if (index == 2) {
+        // Navigate to Sale Page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SalePage()),
+        ).then((_) => _loadDashboardData()); // Refresh on return
+      } else {
+        setState(() {
+          _selectedIndex = index;
+        });
+      }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light background
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 24),
-                _buildDashboardGrid(),
-                const SizedBox(height: 24),
-                _buildSearchBar(),
-                const SizedBox(height: 24),
-                _buildRecentActivityHeader(),
-                const SizedBox(height: 16),
-                _buildRecentActivityList(),
-              ],
+        child: RefreshIndicator(
+          onRefresh: _loadDashboardData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  _isLoading 
+                      ? const Center(child: CircularProgressIndicator()) 
+                      : _buildDashboardGrid(),
+                  const SizedBox(height: 24),
+                  _buildSearchBar(),
+                  const SizedBox(height: 24),
+                  _buildRecentActivityHeader(),
+                  const SizedBox(height: 16),
+                  _isLoading 
+                      ? const SizedBox() 
+                      : _buildRecentActivityList(),
+                ],
+              ),
             ),
           ),
         ),
@@ -42,16 +160,11 @@ class _HomePageState extends State<HomePage> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.teal,
         unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-          // TODO: Implement navigation logic
-        },
+        onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'HOME'),
           BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_outlined), label: 'STOCK'),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'ORDERS'),
+          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'SALE'), // Changed from ORDERS
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'MORE'),
         ],
       ),
@@ -64,6 +177,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -116,7 +230,11 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
   Widget _buildDashboardGrid() {
+    // Determine trends (placeholder logic for now, could be compared to yesterday)
+    // For now, static positive trends
+    
     return Column(
       children: [
         Row(
@@ -126,10 +244,9 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.inventory_2_outlined,
                 iconColor: Colors.blue,
                 toolTip: "Total Items",
-                value: '1,240',
+                value: _totalItems.toString(),
                 subtitle: 'Total Items',
-                trend: '+2.5%',
-                trendUp: true,
+                trend: null, // Removed static trend
               ),
             ),
             const SizedBox(width: 16),
@@ -138,10 +255,10 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.warning_amber_rounded,
                 iconColor: Colors.orange,
                  toolTip: "Low Stock",
-                value: '12',
+                value: _lowStockCount.toString(),
                 subtitle: 'Low Stock',
-                footer: 'Needs attention',
-                footerColor: Colors.orange,
+                footer: _lowStockCount > 0 ? 'Needs attention' : 'Good standing',
+                footerColor: _lowStockCount > 0 ? Colors.orange : Colors.green,
               ),
             ),
           ],
@@ -153,23 +270,21 @@ class _HomePageState extends State<HomePage> {
               child: _buildDashboardCard(
                 icon: Icons.attach_money,
                 iconColor: Colors.green,
-                 toolTip: "Inv. Value",
-                value: '\$14.2k',
-                subtitle: 'Inv. Value',
-                trend: '-1.2%',
-                trendUp: false,
+                 toolTip: "Today's Profit",
+                value: '\$${_profitToday.toStringAsFixed(2)}',
+                subtitle: "Today's Profit",
+                trend: null,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildDashboardCard(
-                icon: Icons.shopping_cart_outlined,
+                icon: Icons.shopping_bag_outlined, // Changed icon
                 iconColor: Colors.purple,
-                 toolTip: "Orders Today",
-                value: '24',
-                subtitle: 'Orders Today',
-                trend: '+10%',
-                trendUp: true,
+                 toolTip: "Sales Today",
+                value: '\$${_salesTodayValue.toStringAsFixed(2)}',
+                subtitle: "Sales Today",
+                trend: null,
               ),
             ),
           ],
@@ -177,6 +292,7 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
   Widget _buildDashboardCard({
     required IconData icon,
     required Color iconColor,
@@ -262,6 +378,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -285,6 +402,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
   Widget _buildRecentActivityHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -304,44 +422,51 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
   Widget _buildRecentActivityList() {
+    if (_recentSales.isEmpty) {
+       return const Center(
+         child: Padding(
+           padding: EdgeInsets.all(16.0),
+           child: Text("No recent activity"),
+         ),
+       );
+    }
+    
     return Column(
-      children: [
-        _buildActivityItem(
-          item: 'Muji-style Gel Pen (B...',
-          action: 'Sold 5 units',
-          time: '2 MINS AGO',
-          icon: Icons.edit,
-          color: Colors.blue,
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          item: 'Linen Hardcover Journal',
-          action: 'Restocked 50 units',
-          time: '1 HR AGO',
-          icon: Icons.book,
-          color: Colors.amber,
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          item: 'Brass Paperclips',
-          action: 'Stock correction (-2)',
-          time: '3 HRS AGO',
-          actionColor: Colors.red,
-          icon: Icons.attach_file,
-          color: Colors.orange,
-        ),
-         const SizedBox(height: 12),
-        _buildActivityItem(
-          item: 'Handmade Cotton Pa...',
-          action: 'Sold 12 packs',
-          time: 'YESTERDAY',
-          icon: Icons.note,
-          color: Colors.brown,
-        ),
-      ],
+      children: _recentSales.map((sale) {
+        final product = _productCache[sale.productId];
+        // Format time nicely
+        // Assuming saleDate is ISO string for now
+        String timeAgo = sale.saleDate; 
+        try {
+            final date = DateTime.parse(sale.saleDate);
+            final diff = DateTime.now().difference(date);
+            if (diff.inMinutes < 60) {
+              timeAgo = '${diff.inMinutes} MINS AGO';
+            } else if (diff.inHours < 24) {
+              timeAgo = '${diff.inHours} HRS AGO';
+            } else {
+              timeAgo = 'YESTERDAY'; // Simplified
+            }
+        } catch(e) {
+            // keep original string if parse fails
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _buildActivityItem(
+            item: product?.name ?? 'Unknown Product',
+            action: 'Sold ${sale.quantitySold} units',
+            time: timeAgo,
+            icon: Icons.shopping_bag,
+            color: Colors.teal,
+          ),
+        );
+      }).toList(),
     );
   }
+
   Widget _buildActivityItem({
     required String item,
     required String action,
@@ -409,6 +534,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
   void _showAddOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -423,7 +549,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddCategoryPage()),
-                );
+                ).then((_) => _loadDashboardData());
               },
             ),
             ListTile(
@@ -434,7 +560,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddProductPage()),
-                );
+                ).then((_) => _loadDashboardData());
               },
             ),
           ],
