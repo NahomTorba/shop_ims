@@ -18,6 +18,7 @@ class _StockPageState extends State<StockPage> {
   List<Product> _filteredProducts = [];
   List<Category> _categories = [];
   Category? _selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
   
   bool _isLoading = true;
 
@@ -25,6 +26,13 @@ class _StockPageState extends State<StockPage> {
   void initState() {
     super.initState();
     _loadData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -49,6 +57,10 @@ class _StockPageState extends State<StockPage> {
     }
   }
 
+  void _onSearchChanged() {
+    _filterProducts();
+  }
+
   void _onCategorySelected(Category? category) {
     setState(() {
       _selectedCategory = category;
@@ -57,9 +69,13 @@ class _StockPageState extends State<StockPage> {
   }
 
   void _filterProducts() {
+    final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredProducts = _allProducts.where((product) {
-        return _selectedCategory == null || product.categoryId == _selectedCategory!.id;
+        final matchesCategory = _selectedCategory == null || product.categoryId == _selectedCategory!.id;
+        final matchesQuery = product.name.toLowerCase().contains(query) || 
+                             (product.productCode?.toLowerCase().contains(query) ?? false);
+        return matchesCategory && matchesQuery;
       }).toList();
     });
   }
@@ -214,6 +230,34 @@ class _StockPageState extends State<StockPage> {
         : Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+               // Search Bar
+               Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      icon: Icon(Icons.search, color: Colors.grey),
+                      hintText: 'Search stock...',
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
                // Categories
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
@@ -241,7 +285,7 @@ class _StockPageState extends State<StockPage> {
                 // Product List
                 Expanded(
                   child: _filteredProducts.isEmpty
-                      ? const Center(child: Text('No products in this category'))
+                      ? const Center(child: Text('No products found'))
                       : ListView.builder(
                           padding: const EdgeInsets.all(16),
                           itemCount: _filteredProducts.length,
