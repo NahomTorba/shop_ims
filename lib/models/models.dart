@@ -94,6 +94,7 @@ class Product {
   final int lowStockThreshold;
   final int? categoryId;
   final int? supplierId;
+  final String? dateAdded;
 
   Product({
     this.id,
@@ -107,6 +108,7 @@ class Product {
     this.lowStockThreshold = 5,
     this.categoryId,
     this.supplierId,
+    this.dateAdded,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -122,6 +124,7 @@ class Product {
       lowStockThreshold: map['Low_Stock_Threshold'] ?? 5,
       categoryId: map['Category_ID'],
       supplierId: map['Supplier_ID'],
+      dateAdded: map['Date_Added'],
     );
   }
 
@@ -138,6 +141,7 @@ class Product {
       'Low_Stock_Threshold': lowStockThreshold,
       'Category_ID': categoryId,
       'Supplier_ID': supplierId,
+      'Date_Added': dateAdded,
     };
   }
 }

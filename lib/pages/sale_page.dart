@@ -69,7 +69,6 @@ class _SalePageState extends State<SalePage> {
   void _onCategorySelected(Category? category) {
     setState(() {
       _selectedCategory = category;
-      _selectedProduct = null;
     });
     _filterProducts();
   }
@@ -83,20 +82,78 @@ class _SalePageState extends State<SalePage> {
         final matchesCategory = _selectedCategory == null || product.categoryId == _selectedCategory!.id;
         return matchesQuery && matchesCategory;
       }).toList();
-      
-      if (_selectedProduct != null && !_filteredProducts.contains(_selectedProduct)) {
-        _selectedProduct = null;
-      }
     });
+  }
+  
+  void _selectProduct(Product product) {
+    setState(() {
+      _selectedProduct = product;
+    });
+    // Scroll to top or just show modal bottom sheet for quantity
+    _showQuantityDialog(product);
+  }
+
+  void _showQuantityDialog(Product product) {
+    _quantityController.clear();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Sell ${product.name}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Available Stock: ${product.stockQuantity}', 
+                 style: TextStyle(color: product.stockQuantity < 5 ? Colors.red : Colors.grey[600])),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _quantityController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Quantity',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+             const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                    Navigator.pop(context);
+                    _recordSale();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2D7697), // Teal
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Confirm Sale'),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _recordSale() async {
-    if (_selectedProduct == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a product')),
-      );
-      return;
-    }
+    if (_selectedProduct == null) return;
     
     final quantityText = _quantityController.text;
     if (quantityText.isEmpty) {
@@ -148,6 +205,7 @@ class _SalePageState extends State<SalePage> {
         lowStockThreshold: _selectedProduct!.lowStockThreshold,
         categoryId: _selectedProduct!.categoryId,
         supplierId: _selectedProduct!.supplierId,
+        dateAdded: _selectedProduct!.dateAdded,
       );
       
       await _productDao.updateProduct(updatedProduct);
@@ -191,42 +249,41 @@ class _SalePageState extends State<SalePage> {
       ),
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator()) 
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   // Search Bar
-                   Container(
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          icon: Icon(Icons.search, color: Colors.grey),
+                          hintText: 'Search product...',
+                          border: InputBorder.none,
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        icon: Icon(Icons.search, color: Colors.grey),
-                        hintText: 'Search product...',
-                        border: InputBorder.none,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   
                   // Categories
-                  const Text('Categories', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
                   SizedBox(
                     height: 50,
                     child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       scrollDirection: Axis.horizontal,
                       itemCount: _categories.length + 1,
                       separatorBuilder: (c, i) => const SizedBox(width: 8),
@@ -240,133 +297,55 @@ class _SalePageState extends State<SalePage> {
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
-                  
-                  // Product Dropdown
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Select Product', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<Product>(
-                          value: _selectedProduct,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                          ),
-                          hint: const Text('Choose a product'),
-                          items: _filteredProducts.map((product) {
-                            return DropdownMenuItem(
-                              value: product,
-                              child: Text('${product.name} (Stock: ${product.stockQuantity})'),
-                            );
-                          }).toList(),
-                          onChanged: (Product? value) {
-                            setState(() {
-                              _selectedProduct = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 16),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Products', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
-
-                   const SizedBox(height: 16),
-                   
-                   if (_selectedProduct != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                  const SizedBox(height: 8),
+                  
+                  // Product List
+                  Expanded(
+                    child: _filteredProducts.isEmpty
+                        ? const Center(child: Text('No products found'))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _filteredProducts.length,
+                            itemBuilder: (context, index) {
+                               final product = _filteredProducts[index];
+                               return Card(
+                                 margin: const EdgeInsets.only(bottom: 12),
+                                 elevation: 2,
+                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                 child: ListTile(
+                                    contentPadding: const EdgeInsets.all(16),
+                                    title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text('Price: \$${product.salePrice}'),
+                                        const SizedBox(height: 4),
+                                        Text('Stock: ${product.stockQuantity}', 
+                                            style: TextStyle(color: product.stockQuantity <= 5 ? Colors.red : Colors.green)),
+                                      ],
+                                    ),
+                                    trailing: ElevatedButton(
+                                      onPressed: () => _selectProduct(product),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF2D7697).withOpacity(0.1),
+                                        foregroundColor: const Color(0xFF2D7697),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      child: const Text('Sell'),
+                                    ),
+                                 ),
+                               );
+                            },
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                             Row(
-                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                               children: [
-                                 Text(_selectedProduct!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                 Text('\$${_selectedProduct!.salePrice.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal)),
-                               ],
-                             ),
-                             const SizedBox(height: 8),
-                             Text('Available Stock: ${_selectedProduct!.stockQuantity}', style: TextStyle(color: _selectedProduct!.stockQuantity > 5 ? Colors.grey : Colors.red)),
-                             const Divider(height: 24),
-                             const Text('Quantity', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                             const SizedBox(height: 8),
-                             TextField(
-                               controller: _quantityController,
-                               keyboardType: TextInputType.number,
-                               decoration: InputDecoration(
-                                 hintText: 'Enter quantity',
-                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                               ),
-                             ),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedProduct = null;
-                                  _quantityController.clear();
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: const Text('Cancel'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _isProcessingSale ? null : _recordSale,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2D7697),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: _isProcessingSale 
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Confirm Sale'),
-                            ),
-                          ),
-                        ],
-                      ),
-                   ],
-                ],
-              ),
+                  ),
+              ],
             ),
     );
   }
@@ -384,6 +363,10 @@ class _SalePageState extends State<SalePage> {
       selectedColor: const Color(0xFF2D7697),
       labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
       backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Colors.transparent)
+      ),
     );
   }
 }

@@ -22,12 +22,20 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: (db) async {
         return db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Version 2: Add Date_Added column to Product table
+      await db.execute('ALTER TABLE Product ADD COLUMN Date_Added TEXT');
+    }
   }
 
   static Future<void> _onCreate(Database db, int version) async {
@@ -78,6 +86,7 @@ class DatabaseHelper {
         Low_Stock_Threshold INTEGER DEFAULT 5,
         Category_ID INTEGER,
         Supplier_ID INTEGER,
+        Date_Added TEXT,
         FOREIGN KEY (Category_ID) REFERENCES Category(Category_ID) ON DELETE SET NULL,
         FOREIGN KEY (Supplier_ID) REFERENCES Supplier(Supplier_ID) ON DELETE SET NULL
       )

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shop_ims/pages/add_category_page.dart';
 import 'package:shop_ims/pages/add_product_page.dart';
-import 'package:shop_ims/pages/sale_page.dart'; // Import SalePage
+import 'package:shop_ims/pages/sale_page.dart';
+import 'package:shop_ims/pages/stock_page.dart'; // Will act as Stock Page
 import 'package:shop_ims/services/dao.dart';
 import 'package:shop_ims/models/models.dart';
 import 'package:intl/intl.dart';
@@ -27,8 +28,16 @@ class _HomePageState extends State<HomePage> {
   int _salesTodayCount = 0;
   double _salesTodayValue = 0.0;
   double _profitToday = 0.0;
-  List<Sale> _recentSales = [];
-  Map<int, Product> _productCache = {}; // Cache for product details in recent activity
+  
+  // Recent Activity (Polymorphic list: Sale or Product)
+  List<dynamic> _recentActivity = [];
+  Map<int, Product> _productCache = {}; 
+  
+  // Search
+  final TextEditingController _searchController = TextEditingController();
+  List<Product> _allProducts = [];
+  List<Product> _searchResults = [];
+  bool _isSearching = false;
 
   bool _isLoading = true;
 
@@ -36,6 +45,26 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadDashboardData();
+    _searchController.addListener(_onSearchChanged);
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+  
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _isSearching = query.isNotEmpty;
+      if (_isSearching) {
+        _searchResults = _allProducts.where((p) {
+          return p.name.toLowerCase().contains(query) || 
+                 (p.productCode?.toLowerCase().contains(query) ?? false);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadDashboardData() async {
@@ -45,11 +74,14 @@ class _HomePageState extends State<HomePage> {
       final products = await _productDao.getProducts();
       final sales = await _saleDao.getSales();
       
+      _allProducts = products;
+      
       // Calculate Total Items & Inventory Value
       int totalItems = 0;
       double invValue = 0;
       int lowStock = 0;
       
+      _productCache.clear();
       for (var p in products) {
         totalItems += p.stockQuantity;
         invValue += p.purchasePrice * p.stockQuantity;
@@ -66,15 +98,8 @@ class _HomePageState extends State<HomePage> {
       int salesCount = 0;
       double salesValue = 0;
       double profit = 0;
-      List<Sale> todaysSalesList = [];
-
-      // Filter for recent sales (simplified: just showing last few sales)
-      // Ideally query with limit and order by in DAO
-      List<Sale> recentSales = List.from(sales);
-      recentSales.sort((a, b) => b.saleDate.compareTo(a.saleDate)); // Sort desc
       
       for (var s in sales) {
-        // Assuming Sale_Date is stored as ISO string or similar that contains yyyy-MM-dd
         if (s.saleDate.startsWith(todayStr)) {
           salesCount += s.quantitySold;
           salesValue += s.totalPrice;
@@ -82,13 +107,27 @@ class _HomePageState extends State<HomePage> {
           final productKey = s.productId;
           if (_productCache.containsKey(productKey)) {
              final product = _productCache[productKey]!;
-             // Profit = (Unit Price - Cost Price) * Qty
-             // Note: This uses CURRENT cost price, which might differ from cost at time of purchase
              profit += (s.unitPrice - product.purchasePrice) * s.quantitySold;
           }
-          todaysSalesList.add(s);
         }
       }
+
+      // Merge Recent Activity
+      List<dynamic> activity = [];
+      activity.addAll(sales);
+      
+      // Add products as activity (based on dateAdded)
+      for (var p in products) {
+        if (p.dateAdded != null) {
+          activity.add(p);
+        }
+      }
+      
+      activity.sort((a, b) {
+        String dateA = a is Sale ? a.saleDate : (a as Product).dateAdded!;
+        String dateB = b is Sale ? b.saleDate : (b as Product).dateAdded!;
+        return dateB.compareTo(dateA); // Descending
+      });
 
       if (mounted) {
         setState(() {
@@ -98,7 +137,7 @@ class _HomePageState extends State<HomePage> {
           _salesTodayCount = salesCount;
           _salesTodayValue = salesValue;
           _profitToday = profit;
-          _recentSales = recentSales.take(5).toList();
+          _recentActivity = activity.take(10).toList();
           _isLoading = false;
         });
       }
@@ -109,12 +148,18 @@ class _HomePageState extends State<HomePage> {
   }
   
   void _onItemTapped(int index) {
-      if (index == 2) {
-        // Navigate to Sale Page
+      if (index == 1) {
+         // Stock Page
+         Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const StockPage()),
+        ).then((_) => _loadDashboardData());
+      } else if (index == 2) {
+        // Sale Page
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SalePage()),
-        ).then((_) => _loadDashboardData()); // Refresh on return
+        ).then((_) => _loadDashboardData()); 
       } else {
         setState(() {
           _selectedIndex = index;
@@ -125,33 +170,44 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Light background
+      backgroundColor: Colors.grey[50], 
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDashboardData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-                  _isLoading 
-                      ? const Center(child: CircularProgressIndicator()) 
-                      : _buildDashboardGrid(),
-                  const SizedBox(height: 24),
-                  _buildSearchBar(),
-                  const SizedBox(height: 24),
-                  _buildRecentActivityHeader(),
-                  const SizedBox(height: 16),
-                  _isLoading 
-                      ? const SizedBox() 
-                      : _buildRecentActivityList(),
-                ],
-              ),
-            ),
+          child: Column(
+            children: [
+               Padding(
+                 padding: const EdgeInsets.all(16.0),
+                 child: _buildHeader(),
+               ),
+               Padding(
+                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                 child: _buildSearchBar(),
+               ),
+               const SizedBox(height: 16),
+               Expanded(
+                 child: _isSearching 
+                    ? _buildSearchResults()
+                    : SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _isLoading 
+                                ? const Center(child: CircularProgressIndicator()) 
+                                : _buildDashboardGrid(),
+                            const SizedBox(height: 24),
+                            _buildRecentActivityHeader(),
+                            const SizedBox(height: 16),
+                            _isLoading 
+                                ? const SizedBox() 
+                                : _buildRecentActivityList(),
+                          ],
+                        ),
+                      ),
+               ),
+            ],
           ),
         ),
       ),
@@ -164,7 +220,7 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'HOME'),
           BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_outlined), label: 'STOCK'),
-          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'SALE'), // Changed from ORDERS
+          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'SALE'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'MORE'),
         ],
       ),
@@ -178,6 +234,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return const Center(child: Text('No products found'));
+    }
+    return ListView.builder(
+      itemCount: _searchResults.length,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemBuilder: (context, index) {
+        final product = _searchResults[index];
+        return Card(
+           margin: const EdgeInsets.only(bottom: 8),
+           elevation: 2,
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+           child: ListTile(
+             leading: CircleAvatar(
+               backgroundColor: Colors.blue.withOpacity(0.1),
+               child: Text(product.name.substring(0,1).toUpperCase()),
+             ),
+             title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+             subtitle: Text('Stock: ${product.stockQuantity} | Price: \$${product.salePrice}'),
+             trailing: const Icon(Icons.chevron_right),
+           ),
+        );
+      },
+    );
+  }
+
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -186,7 +269,11 @@ class _HomePageState extends State<HomePage> {
           children: [
             const CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+              child: Icon(
+                Icons.account_circle_outlined,
+                size: 40,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -219,7 +306,7 @@ class _HomePageState extends State<HomePage> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -232,9 +319,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDashboardGrid() {
-    // Determine trends (placeholder logic for now, could be compared to yesterday)
-    // For now, static positive trends
-    
     return Column(
       children: [
         Row(
@@ -246,7 +330,7 @@ class _HomePageState extends State<HomePage> {
                 toolTip: "Total Items",
                 value: _totalItems.toString(),
                 subtitle: 'Total Items',
-                trend: null, // Removed static trend
+                trend: null,
               ),
             ),
             const SizedBox(width: 16),
@@ -254,7 +338,7 @@ class _HomePageState extends State<HomePage> {
               child: _buildDashboardCard(
                 icon: Icons.warning_amber_rounded,
                 iconColor: Colors.orange,
-                 toolTip: "Low Stock",
+                toolTip: "Low Stock",
                 value: _lowStockCount.toString(),
                 subtitle: 'Low Stock',
                 footer: _lowStockCount > 0 ? 'Needs attention' : 'Good standing',
@@ -270,7 +354,7 @@ class _HomePageState extends State<HomePage> {
               child: _buildDashboardCard(
                 icon: Icons.attach_money,
                 iconColor: Colors.green,
-                 toolTip: "Today's Profit",
+                toolTip: "Today's Profit",
                 value: '\$${_profitToday.toStringAsFixed(2)}',
                 subtitle: "Today's Profit",
                 trend: null,
@@ -279,9 +363,9 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildDashboardCard(
-                icon: Icons.shopping_bag_outlined, // Changed icon
+                icon: Icons.shopping_bag_outlined,
                 iconColor: Colors.purple,
-                 toolTip: "Sales Today",
+                toolTip: "Sales Today",
                 value: '\$${_salesTodayValue.toStringAsFixed(2)}',
                 subtitle: "Sales Today",
                 trend: null,
@@ -311,7 +395,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -323,7 +407,7 @@ class _HomePageState extends State<HomePage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor),
@@ -345,28 +429,9 @@ class _HomePageState extends State<HomePage> {
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 8),
-          if (trend != null)
-            Row(
-              children: [
-                Icon(
-                  trendUp ? Icons.trending_up : Icons.trending_down,
-                  size: 16,
-                  color: trendUp ? Colors.green : Colors.red,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  trend,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: trendUp ? Colors.green : Colors.red,
-                  ),
-                ),
-              ],
-            ),
-          if (footer != null)
-            Text(
+          if (footer != null) ...[
+             const SizedBox(height: 8),
+             Text(
               footer,
               style: TextStyle(
                 fontSize: 12,
@@ -374,6 +439,7 @@ class _HomePageState extends State<HomePage> {
                 color: footerColor,
               ),
             ),
+          ]
         ],
       ),
     );
@@ -387,14 +453,15 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: const TextField(
-        decoration: InputDecoration(
+      child: TextField(
+        controller: _searchController,
+        decoration: const InputDecoration(
           icon: Icon(Icons.search, color: Colors.grey),
           hintText: 'Search activity or items...',
           border: InputBorder.none,
@@ -424,7 +491,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRecentActivityList() {
-    if (_recentSales.isEmpty) {
+    if (_recentActivity.isEmpty) {
        return const Center(
          child: Padding(
            padding: EdgeInsets.all(16.0),
@@ -434,37 +501,64 @@ class _HomePageState extends State<HomePage> {
     }
     
     return Column(
-      children: _recentSales.map((sale) {
-        final product = _productCache[sale.productId];
-        // Format time nicely
-        // Assuming saleDate is ISO string for now
-        String timeAgo = sale.saleDate; 
-        try {
-            final date = DateTime.parse(sale.saleDate);
-            final diff = DateTime.now().difference(date);
-            if (diff.inMinutes < 60) {
-              timeAgo = '${diff.inMinutes} MINS AGO';
-            } else if (diff.inHours < 24) {
-              timeAgo = '${diff.inHours} HRS AGO';
-            } else {
-              timeAgo = 'YESTERDAY'; // Simplified
-            }
-        } catch(e) {
-            // keep original string if parse fails
+      children: _recentActivity.map((item) {
+        if (item is Sale) {
+           return _buildSaleItem(item);
+        } else if (item is Product) {
+           return _buildProductAddedItem(item);
         }
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: _buildActivityItem(
-            item: product?.name ?? 'Unknown Product',
-            action: 'Sold ${sale.quantitySold} units',
-            time: timeAgo,
-            icon: Icons.shopping_bag,
-            color: Colors.teal,
-          ),
-        );
+        return const SizedBox();
       }).toList(),
     );
+  }
+  
+  Widget _buildSaleItem(Sale sale) {
+    final product = _productCache[sale.productId];
+    String timeAgo = _getTimeAgo(sale.saleDate);
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: _buildActivityItem(
+        item: product?.name ?? 'Unknown Product',
+        action: 'Sold ${sale.quantitySold} units',
+        time: timeAgo,
+        icon: Icons.shopping_bag,
+        color: Colors.teal,
+      ),
+    );
+  }
+
+  Widget _buildProductAddedItem(Product product) {
+    String timeAgo = _getTimeAgo(product.dateAdded ?? DateTime.now().toIso8601String());
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: _buildActivityItem(
+        item: product.name,
+        action: 'Added ${product.stockQuantity} to stock',
+        time: timeAgo,
+        icon: Icons.add_box,
+        color: Colors.blue,
+      ),
+    );
+  }
+  
+  String _getTimeAgo(String dateStr) {
+     try {
+        final date = DateTime.parse(dateStr);
+        final diff = DateTime.now().difference(date);
+        if (diff.inMinutes < 60) {
+          return '${diff.inMinutes} MINS AGO';
+        } else if (diff.inHours < 24) {
+          return '${diff.inHours} HRS AGO';
+        } else if (diff.inDays == 1) {
+          return 'YESTERDAY';
+        } else {
+          return '${diff.inDays} DAYS AGO';
+        }
+    } catch(e) {
+        return '';
+    }
   }
 
   Widget _buildActivityItem({
@@ -482,7 +576,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -494,7 +588,7 @@ class _HomePageState extends State<HomePage> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color),
