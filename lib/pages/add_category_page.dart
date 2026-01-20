@@ -14,6 +14,19 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
   final _descriptionController = TextEditingController();
   final CategoryDao _categoryDao = CategoryDao();
   bool _isLoading = false;
+  
+  // Icon Selection
+  int _selectedIconIndex = 0;
+  final List<Map<String, dynamic>> _categoryIcons = [
+    {'icon': Icons.cake, 'label': 'Sweet'},
+    {'icon': Icons.local_drink, 'label': 'Bottle'},
+    {'icon': Icons.shopping_bag, 'label': 'Bag'},
+    {'icon': Icons.diamond, 'label': 'Jewellery'},
+    {'icon': Icons.edit, 'label': 'Writing'},
+    {'icon': Icons.menu_book, 'label': 'Paper'},
+    {'icon': Icons.checkroom, 'label': 'Clothes'},
+    {'icon': Icons.devices, 'label': 'Tech'},
+  ];
 
   Future<void> _saveCategory() async {
     if (_nameController.text.isEmpty) {
@@ -51,9 +64,6 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.blue),
           onPressed: () => Navigator.pop(context),
         ),
-         leadingWidth: 80,
-         // Hack to imitate the "Back" text with the icon
-         // Ideally use a custom Row or RichText in leading if needed specific styling
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -180,36 +190,49 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
   }
 
   Widget _buildIconGrid() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildIconItem(Icons.edit, 'Writing', true),
-        _buildIconItem(Icons.menu_book, 'Paper', false),
-        _buildIconItem(Icons.brush, 'Art', false),
-      ],
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.0,
+      ),
+      itemCount: _categoryIcons.length,
+      itemBuilder: (context, index) {
+        final iconData = _categoryIcons[index];
+        final isSelected = _selectedIconIndex == index;
+        return _buildIconItem(iconData['icon'], iconData['label'], isSelected, index);
+      },
     );
   }
   
-  Widget _buildIconItem(IconData icon, String label, bool selected) {
-      return Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE0F2F1) : Colors.white,
-          border: Border.all(color: selected ? Colors.teal : Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: selected ? Colors.teal : Colors.black87),
-            const SizedBox(height: 8),
-            Text(label, style: TextStyle(
-              color: selected ? Colors.teal : Colors.black87,
-              fontWeight: FontWeight.bold
-              )
-            ),
-          ],
+  Widget _buildIconItem(IconData icon, String label, bool selected, int index) {
+      return InkWell(
+        onTap: () {
+          setState(() {
+            _selectedIconIndex = index;
+          });
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFE0F2F1) : Colors.white,
+            border: Border.all(color: selected ? Colors.teal : Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: selected ? Colors.teal : Colors.black87),
+              const SizedBox(height: 8),
+              Text(label, style: TextStyle(
+                color: selected ? Colors.teal : Colors.black87,
+                fontWeight: FontWeight.bold
+                )
+              ),
+            ],
+          ),
         ),
       );
   }
