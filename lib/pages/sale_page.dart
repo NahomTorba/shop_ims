@@ -261,7 +261,7 @@ class _SalePageState extends State<SalePage> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -333,7 +333,7 @@ class _SalePageState extends State<SalePage> {
                                     trailing: ElevatedButton(
                                       onPressed: () => _selectProduct(product),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2D7697).withOpacity(0.1),
+                                        backgroundColor: const Color(0xFF2D7697).withValues(alpha: 0.1),
                                         foregroundColor: const Color(0xFF2D7697),
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

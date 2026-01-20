@@ -187,7 +187,7 @@ class _AddProductPageState extends State<AddProductPage> {
                         _buildLabel('Category*'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<Category>(
-                          value: _selectedCategory,
+                          initialValue: _selectedCategory,
                           items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
                           onChanged: (val) => setState(() => _selectedCategory = val),
                           decoration: _inputDecoration('Select Category'),
@@ -406,7 +406,7 @@ class _AddProductPageState extends State<AddProductPage> {
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),

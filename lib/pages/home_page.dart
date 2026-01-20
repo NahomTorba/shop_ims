@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shop_ims/pages/add_category_page.dart';
 import 'package:shop_ims/pages/add_product_page.dart';
 import 'package:shop_ims/pages/sale_page.dart';
-import 'package:shop_ims/pages/stock_page.dart'; // Will act as Stock Page
+import 'package:shop_ims/pages/stock_page.dart';
 import 'package:shop_ims/services/dao.dart';
 import 'package:shop_ims/models/models.dart';
 import 'package:intl/intl.dart';
@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
   
   // Recent Activity (Polymorphic list: Sale or Product)
   List<dynamic> _recentActivity = [];
-  Map<int, Product> _productCache = {}; 
+  final Map<int, Product> _productCache = {}; 
   
   // Search
   final TextEditingController _searchController = TextEditingController();
@@ -249,7 +249,7 @@ class _HomePageState extends State<HomePage> {
            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
            child: ListTile(
              leading: CircleAvatar(
-               backgroundColor: Colors.blue.withOpacity(0.1),
+               backgroundColor: Colors.blue.withValues(alpha: 0.1),
                child: Text(product.name.substring(0,1).toUpperCase()),
              ),
              title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -306,7 +306,7 @@ class _HomePageState extends State<HomePage> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -395,7 +395,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -407,7 +407,7 @@ class _HomePageState extends State<HomePage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor),
@@ -453,7 +453,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -576,7 +576,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -588,7 +588,7 @@ class _HomePageState extends State<HomePage> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color),
