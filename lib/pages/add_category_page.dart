@@ -14,19 +14,6 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
   final _descriptionController = TextEditingController();
   final CategoryDao _categoryDao = CategoryDao();
   bool _isLoading = false;
-  
-  // Icon Selection
-  int _selectedIconIndex = 0;
-  final List<Map<String, dynamic>> _categoryIcons = [
-    {'icon': Icons.cake, 'label': 'Sweet'},
-    {'icon': Icons.local_drink, 'label': 'Bottle'},
-    {'icon': Icons.shopping_bag, 'label': 'Bag'},
-    {'icon': Icons.diamond, 'label': 'Jewellery'},
-    {'icon': Icons.edit, 'label': 'Writing'},
-    {'icon': Icons.menu_book, 'label': 'Paper'},
-    {'icon': Icons.checkroom, 'label': 'Clothes'},
-    {'icon': Icons.devices, 'label': 'Tech'},
-  ];
 
   Future<void> _saveCategory() async {
     if (_nameController.text.isEmpty) {
@@ -37,7 +24,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
     }
 
     setState(() => _isLoading = true);
-    
+
     final category = Category(
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
@@ -57,7 +44,10 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Add Category', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Add Category',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -104,7 +94,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                       enabledBorder: OutlineInputBorder(
-                         borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                     ),
@@ -120,16 +110,17 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                   ),
                   const SizedBox(height: 8),
                   TextField(
-                     controller: _descriptionController,
+                    controller: _descriptionController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Describe the items in this category for better inventory tracking...',
+                      hintText:
+                          'Describe the items in this category for better inventory tracking...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                       enabledBorder: OutlineInputBorder(
-                         borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                     ),
@@ -138,36 +129,21 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Category Icon',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('View All'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildIconGrid(),
-            const SizedBox(height: 32),
             const Text(
               '* Categories help organize your inventory and generate more accurate sales reports.',
-              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic, fontSize: 12),
+              style: TextStyle(
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveCategory,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4FA8C8), // Light blue similar to design
+                  backgroundColor: const Color(0xFF4FA8C8),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -176,64 +152,39 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                 ),
                 child: _isLoading
                     ? const SizedBox(
-                        height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Save Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Save Category',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
-             const SizedBox(height: 16),
-             Center(child: TextButton(onPressed: ()=> Navigator.pop(context), 
-             child: const Text("Cancel", style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),))),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildIconGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.0,
-      ),
-      itemCount: _categoryIcons.length,
-      itemBuilder: (context, index) {
-        final iconData = _categoryIcons[index];
-        final isSelected = _selectedIconIndex == index;
-        return _buildIconItem(iconData['icon'], iconData['label'], isSelected, index);
-      },
-    );
-  }
-  
-  Widget _buildIconItem(IconData icon, String label, bool selected, int index) {
-      return InkWell(
-        onTap: () {
-          setState(() {
-            _selectedIconIndex = index;
-          });
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE0F2F1) : Colors.white,
-            border: Border.all(color: selected ? Colors.teal : Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: selected ? Colors.teal : Colors.black87),
-              const SizedBox(height: 8),
-              Text(label, style: TextStyle(
-                color: selected ? Colors.teal : Colors.black87,
-                fontWeight: FontWeight.bold
-                )
-              ),
-            ],
-          ),
-        ),
-      );
   }
 }
