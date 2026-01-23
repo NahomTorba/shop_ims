@@ -31,12 +31,13 @@ class _HomePageState extends State<HomePage> {
   
   // Recent Activity (Polymorphic list: Sale or Product)
   List<dynamic> _recentActivity = [];
+  List<dynamic> _allActivity = [];
   final Map<int, Product> _productCache = {}; 
   
   // Search
   final TextEditingController _searchController = TextEditingController();
-  List<Product> _allProducts = [];
-  List<Product> _searchResults = [];
+  List<Product> _allProducts = []; // Keep for stats calculation
+  List<dynamic> _searchResults = [];
   bool _isSearching = false;
 
   bool _isLoading = true;
@@ -59,9 +60,15 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _isSearching = query.isNotEmpty;
       if (_isSearching) {
-        _searchResults = _allProducts.where((p) {
-          return p.name.toLowerCase().contains(query) || 
-                 (p.productCode?.toLowerCase().contains(query) ?? false);
+        _searchResults = _allActivity.where((item) {
+          if (item is Product) {
+             return item.name.toLowerCase().contains(query) || 
+                    (item.productCode?.toLowerCase().contains(query) ?? false);
+          } else if (item is Sale) {
+             final product = _productCache[item.productId];
+             return product?.name.toLowerCase().contains(query) ?? false;
+          }
+          return false;
         }).toList();
       }
     });
@@ -128,6 +135,8 @@ class _HomePageState extends State<HomePage> {
         String dateB = b is Sale ? b.saleDate : (b as Product).dateAdded!;
         return dateB.compareTo(dateA); // Descending
       });
+      
+      _allActivity = activity;
 
       if (mounted) {
         setState(() {
@@ -236,27 +245,19 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSearchResults() {
     if (_searchResults.isEmpty) {
-      return const Center(child: Text('No products found'));
+      return const Center(child: Text('No activity found'));
     }
     return ListView.builder(
       itemCount: _searchResults.length,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemBuilder: (context, index) {
-        final product = _searchResults[index];
-        return Card(
-           margin: const EdgeInsets.only(bottom: 8),
-           elevation: 2,
-           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-           child: ListTile(
-             leading: CircleAvatar(
-               backgroundColor: Colors.blue.withValues(alpha: 0.1),
-               child: Text(product.name.substring(0,1).toUpperCase()),
-             ),
-             title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-             subtitle: Text('Stock: ${product.stockQuantity} | Price: \$${product.salePrice}'),
-             trailing: const Icon(Icons.chevron_right),
-           ),
-        );
+        final item = _searchResults[index];
+        if (item is Sale) {
+           return _buildSaleItem(item);
+        } else if (item is Product) {
+           return _buildProductAddedItem(item);
+        }
+        return const SizedBox();
       },
     );
   }
