@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shop_ims/pages/add_category_page.dart';
 import 'package:shop_ims/pages/add_product_page.dart';
+import 'package:shop_ims/pages/more_reports.dart';
 import 'package:shop_ims/pages/sale_page.dart';
 import 'package:shop_ims/pages/stock_page.dart';
 import 'package:shop_ims/services/dao.dart';
@@ -169,6 +170,12 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(builder: (context) => const SalePage()),
         ).then((_) => _loadDashboardData()); 
+      } else if(index == 3){
+        // more reports page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ReportsPage()),
+        ).then((_) => _loadDashboardData());
       } else {
         setState(() {
           _selectedIndex = index;
@@ -227,7 +234,7 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'HOME'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
           BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_outlined), label: 'STOCK'),
           BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'SALE'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'MORE'),
