@@ -11,17 +11,20 @@ class ComingSoonPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            //place holder gif
+            Image.asset('assets/rickroll-roll.gif', height: 400),
+            const SizedBox(height: 30),
+            const Icon(
               Icons.construction,
               size: 80,
               color: Colors.grey,
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               'Coming Soon',
               style: TextStyle(
                 fontSize: 24,
@@ -29,8 +32,8 @@ class ComingSoonPage extends StatelessWidget {
                 color: Colors.grey,
               ),
             ),
-            SizedBox(height: 10),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'This feature is under development.',
               style: TextStyle(
                 fontSize: 16,
