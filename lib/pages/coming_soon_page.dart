@@ -16,7 +16,7 @@ class ComingSoonPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             //place holder gif
-            Image.asset('assets/rickroll-roll.gif', height: 400),
+            Image.asset('assets/rickroll-roll.gif', height: 300),
             const SizedBox(height: 30),
             const Icon(
               Icons.construction,

@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onConfigure: (db) async {
         return db.execute('PRAGMA foreign_keys = ON');
       },
@@ -80,7 +80,6 @@ class DatabaseHelper {
         Description TEXT,
         Purchase_Price REAL NOT NULL,
         Sale_Price REAL NOT NULL,
-        Stock_Quantity INTEGER NOT NULL,
         Product_Code TEXT UNIQUE,
         Expiration_Date TEXT,
         Low_Stock_Threshold INTEGER DEFAULT 5,
@@ -92,40 +91,29 @@ class DatabaseHelper {
       )
     ''');
 
-    // Sale table
+    // Stock table (correct FK)
     batch.execute('''
-      CREATE TABLE Sale (
-        Sale_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        Product_ID INTEGER NOT NULL,
-        Quantity_Sold INTEGER NOT NULL,
-        Unit_Price REAL NOT NULL,
-        Total_Price REAL NOT NULL,
-        Sale_Date TEXT NOT NULL,
+      CREATE TABLE Stock (
+        Product_ID INTEGER PRIMARY KEY,
+        Quantity INTEGER NOT NULL DEFAULT 0,
+        Last_Updated TEXT,
         FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID) ON DELETE CASCADE
       )
     ''');
 
-    // Purchase table
+    // Inventory movement table
     batch.execute('''
-      CREATE TABLE Purchase (
-        Purchase_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+      CREATE TABLE Inventory_Movement (
+        Movement_ID INTEGER PRIMARY KEY AUTOINCREMENT,
         Product_ID INTEGER NOT NULL,
-        Quantity_Purchased INTEGER NOT NULL,
-        Unit_Price REAL NOT NULL,
-        Total_Price REAL NOT NULL,
-        Purchase_Date TEXT NOT NULL,
-        FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID) ON DELETE CASCADE
-      )
-    ''');
-
-    // Transactions table
-    batch.execute('''
-      CREATE TABLE Transactions (
-        Transaction_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        Type TEXT NOT NULL,
-        Amount REAL NOT NULL,
-        Date TEXT NOT NULL,
-        Description TEXT
+        User_ID INTEGER NOT NULL,
+        Movement_Type TEXT NOT NULL,
+        Quantity INTEGER NOT NULL,
+        Unit_Price REAL,
+        Movement_Date TEXT NOT NULL,
+        Reason TEXT,
+        FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID),
+        FOREIGN KEY (User_ID) REFERENCES User(User_ID)
       )
     ''');
 
@@ -180,62 +168,23 @@ class DatabaseHelper {
     }
   }
 
-  // Process sale (update inventory and record transaction)
-  Future<void> processSale(Map<String, dynamic> transaction, List<Map<String, dynamic>> items) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      // Insert the transaction
-      await txn.insert('Transaction', transaction);
-
-      // Update stock for each item sold
-      for (var item in items) {
-        int productId = item['Product_ID'];
-        int quantitySold = item['Quantity_Sold'];
-
-        // Update the product stock quantity
-        var product = await txn.query(
-          'Product',
-          where: 'Product_ID = ?',
-          whereArgs: [productId],
-        );
-
-        if (product.isNotEmpty) {
-          var updatedProduct = product.first;
-          int updatedStock = (updatedProduct['Stock_Quantity'] as int) - quantitySold;
-
-          // Update the product stock in the database
-          await txn.update(
-            'Product',
-            {'Stock_Quantity': updatedStock},
-            where: 'Product_ID = ?',
-            whereArgs: [productId],
-          );
-        }
-
-        // Insert the sale record
-        await txn.insert('Sale', item);
-      }
-    });
-  }
-
   Future<void> createDefaultAdmin() async {
-  final db = await database;
+    final db = await database;
 
-  final result = await db.query(
-    'User',
-    where: 'Email = ?',
-    whereArgs: ['admin@shop.com'],
-    limit: 1,
-  );
+    final result = await db.query(
+      'User',
+      where: 'Email = ?',
+      whereArgs: ['admin@shop.com'],
+      limit: 1,
+    );
 
-  if (result.isEmpty) {
-    await db.insert('User', {
-      'Full_Name': 'Admin',
-      'Email': 'admin@shop.com',
-      'Password': 'admin123',
-      'Role': 'Admin',
-    });
+    if (result.isEmpty) {
+      await db.insert('User', {
+        'Full_Name': 'Admin',
+        'Email': 'admin@shop.com',
+        'Password': 'admin123',
+        'Role': 'Admin',
+      });
+    }
   }
-}
-
 }

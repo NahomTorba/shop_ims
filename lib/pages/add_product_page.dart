@@ -42,7 +42,7 @@ class _AddProductPageState extends State<AddProductPage> {
     _descriptionController.text = p.description ?? '';
     _costPriceController.text = p.purchasePrice.toString();
     _salePriceController.text = p.salePrice.toString();
-    _stockQuantityController.text = p.stockQuantity.toString();
+    _stockQuantityController.text = p.currentStock?.toString() ?? '0';
     _productCodeController.text = p.productCode ?? '';
     
     if (p.expirationDate != null) {
@@ -112,7 +112,7 @@ class _AddProductPageState extends State<AddProductPage> {
         description: _descriptionController.text.trim(),
         purchasePrice: double.parse(_costPriceController.text.trim()),
         salePrice: double.parse(_salePriceController.text.trim()),
-        stockQuantity: int.parse(_stockQuantityController.text.trim()),
+        currentStock: int.parse(_stockQuantityController.text.trim()), // Use currentStock
         productCode: _productCodeController.text.trim().isNotEmpty ? _productCodeController.text.trim() : null,
         expirationDate: _expirationDate != null
             ? DateFormat('MM/dd/yyyy').format(_expirationDate!)

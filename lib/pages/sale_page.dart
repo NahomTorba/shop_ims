@@ -12,7 +12,7 @@ class SalePage extends StatefulWidget {
 class _SalePageState extends State<SalePage> {
   final ProductDao _productDao = ProductDao();
   final CategoryDao _categoryDao = CategoryDao();
-  final SaleDao _saleDao = SaleDao();
+  final InventoryMovementDao _movementDao = InventoryMovementDao();
 
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
@@ -52,6 +52,7 @@ class _SalePageState extends State<SalePage> {
         _categories = categories;
         _isLoading = false;
       });
+      _filterProducts();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -89,7 +90,6 @@ class _SalePageState extends State<SalePage> {
     setState(() {
       _selectedProduct = product;
     });
-    // Scroll to top or just show modal bottom sheet for quantity
     _showQuantityDialog(product);
   }
 
@@ -116,15 +116,15 @@ class _SalePageState extends State<SalePage> {
           children: [
             Text('Sell ${product.name}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('Available Stock: ${product.stockQuantity}', 
-                 style: TextStyle(color: product.stockQuantity < 5 ? Colors.red : Colors.grey[600])),
+            Text('Available Stock: ${product.currentStock ?? 0}', 
+                 style: TextStyle(color: (product.currentStock ?? 0) < 5 ? Colors.red : Colors.grey[600])),
             const SizedBox(height: 16),
             TextField(
               controller: _quantityController,
               keyboardType: TextInputType.number,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Quantity',
+                labelText: 'Quantity to Sell',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -132,7 +132,7 @@ class _SalePageState extends State<SalePage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: _isProcessingSale ? null : () {
                     Navigator.pop(context);
                     _recordSale();
                 },
@@ -142,7 +142,9 @@ class _SalePageState extends State<SalePage> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Confirm Sale'),
+                child: _isProcessingSale 
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                    : const Text('Confirm Sale'),
               ),
             ),
             const SizedBox(height: 32),
@@ -171,9 +173,10 @@ class _SalePageState extends State<SalePage> {
       return;
     }
     
-    if (quantity > _selectedProduct!.stockQuantity) {
+    final currentStock = _selectedProduct!.currentStock ?? 0;
+    if (quantity > currentStock) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Not enough stock! Available: ${_selectedProduct!.stockQuantity}')),
+        SnackBar(content: Text('Not enough stock! Available: $currentStock')),
       );
       return;
     }
@@ -181,34 +184,18 @@ class _SalePageState extends State<SalePage> {
     setState(() => _isProcessingSale = true);
 
     try {
-      // 1. Create Sale Record
-      final sale = Sale(
+      // Create Inventory Movement Record (Type: OUT)
+      final movement = InventoryMovement(
         productId: _selectedProduct!.id!,
-        quantitySold: quantity,
+        userId: 1, // Assuming default Admin user ID 1 for now, or fetch from session
+        movementType: 'OUT',
+        quantity: quantity,
         unitPrice: _selectedProduct!.salePrice,
-        totalPrice: _selectedProduct!.salePrice * quantity,
-        saleDate: DateTime.now().toIso8601String(),
+        movementDate: DateTime.now().toIso8601String(),
+        reason: 'Sale',
       );
       
-      await _saleDao.insertSale(sale);
-      
-      // 2. Update Product Stock
-      final updatedProduct = Product(
-        id: _selectedProduct!.id,
-        name: _selectedProduct!.name,
-        description: _selectedProduct!.description,
-        purchasePrice: _selectedProduct!.purchasePrice,
-        salePrice: _selectedProduct!.salePrice,
-        stockQuantity: _selectedProduct!.stockQuantity - quantity,
-        productCode: _selectedProduct!.productCode,
-        expirationDate: _selectedProduct!.expirationDate,
-        lowStockThreshold: _selectedProduct!.lowStockThreshold,
-        categoryId: _selectedProduct!.categoryId,
-        supplierId: _selectedProduct!.supplierId,
-        dateAdded: _selectedProduct!.dateAdded,
-      );
-      
-      await _productDao.updateProduct(updatedProduct);
+      await _movementDao.insertMovement(movement);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +205,7 @@ class _SalePageState extends State<SalePage> {
         setState(() {
           _selectedProduct = null;
         });
-        _loadData(); // Refresh data
+        _loadData(); // Refresh data to show updated stock
       }
       
     } catch (e) {
@@ -237,7 +224,7 @@ class _SalePageState extends State<SalePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Light background
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('New Sale', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
@@ -313,6 +300,7 @@ class _SalePageState extends State<SalePage> {
                             itemCount: _filteredProducts.length,
                             itemBuilder: (context, index) {
                                final product = _filteredProducts[index];
+                               final stock = product.currentStock ?? 0;
                                return Card(
                                  margin: const EdgeInsets.only(bottom: 12),
                                  elevation: 2,
@@ -326,8 +314,8 @@ class _SalePageState extends State<SalePage> {
                                         const SizedBox(height: 4),
                                         Text('Price: \$${product.salePrice}'),
                                         const SizedBox(height: 4),
-                                        Text('Stock: ${product.stockQuantity}', 
-                                            style: TextStyle(color: product.stockQuantity <= 5 ? Colors.red : Colors.green)),
+                                        Text('Stock: $stock', 
+                                            style: TextStyle(color: stock <= 5 ? Colors.red : Colors.green)),
                                       ],
                                     ),
                                     trailing: ElevatedButton(

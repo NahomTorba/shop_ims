@@ -88,13 +88,15 @@ class Product {
   final String? description;
   final double purchasePrice;
   final double salePrice;
-  final int stockQuantity;
   final String? productCode;
   final String? expirationDate;
   final int lowStockThreshold;
   final int? categoryId;
   final int? supplierId;
   final String? dateAdded;
+  
+  // Transient field for UI display, populated via JOINs
+  final int? currentStock;
 
   Product({
     this.id,
@@ -102,13 +104,13 @@ class Product {
     this.description,
     required this.purchasePrice,
     required this.salePrice,
-    required this.stockQuantity,
     this.productCode,
     this.expirationDate,
     this.lowStockThreshold = 5,
     this.categoryId,
     this.supplierId,
     this.dateAdded,
+    this.currentStock,
   });
 
   factory Product.fromMap(Map<String, dynamic> map) {
@@ -118,13 +120,13 @@ class Product {
       description: map['Description'],
       purchasePrice: map['Purchase_Price'],
       salePrice: map['Sale_Price'],
-      stockQuantity: map['Stock_Quantity'],
       productCode: map['Product_Code'],
       expirationDate: map['Expiration_Date'],
       lowStockThreshold: map['Low_Stock_Threshold'] ?? 5,
       categoryId: map['Category_ID'],
       supplierId: map['Supplier_ID'],
       dateAdded: map['Date_Added'],
+      currentStock: map['Quantity'], // Populated from Stock table join
     );
   }
 
@@ -135,129 +137,89 @@ class Product {
       'Description': description,
       'Purchase_Price': purchasePrice,
       'Sale_Price': salePrice,
-      'Stock_Quantity': stockQuantity,
       'Product_Code': productCode,
       'Expiration_Date': expirationDate,
       'Low_Stock_Threshold': lowStockThreshold,
       'Category_ID': categoryId,
       'Supplier_ID': supplierId,
       'Date_Added': dateAdded,
+      // currentStock is NOT preserved in Product table
     };
   }
 }
 
-class Sale {
-  final int? id;
+class Stock {
   final int productId;
-  final int quantitySold;
-  final double unitPrice;
-  final double totalPrice;
-  final String saleDate;
+  final int quantity;
+  final String? lastUpdated;
 
-  Sale({
-    this.id,
+  Stock({
     required this.productId,
-    required this.quantitySold,
-    required this.unitPrice,
-    required this.totalPrice,
-    required this.saleDate,
+    required this.quantity,
+    this.lastUpdated,
   });
 
-  factory Sale.fromMap(Map<String, dynamic> map) {
-    return Sale(
-      id: map['Sale_ID'],
+  factory Stock.fromMap(Map<String, dynamic> map) {
+    return Stock(
       productId: map['Product_ID'],
-      quantitySold: map['Quantity_Sold'],
-      unitPrice: map['Unit_Price'],
-      totalPrice: map['Total_Price'],
-      saleDate: map['Sale_Date'],
+      quantity: map['Quantity'],
+      lastUpdated: map['Last_Updated'],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'Sale_ID': id,
       'Product_ID': productId,
-      'Quantity_Sold': quantitySold,
-      'Unit_Price': unitPrice,
-      'Total_Price': totalPrice,
-      'Sale_Date': saleDate,
+      'Quantity': quantity,
+      'Last_Updated': lastUpdated,
     };
   }
 }
 
-class Purchase {
-  final int? id;
+class InventoryMovement {
+  final int? movementId;
   final int productId;
-  final int quantityPurchased;
-  final double unitPrice;
-  final double totalPrice;
-  final String purchaseDate;
+  final int userId;
+  final String movementType;
+  final int quantity;
+  final double? unitPrice;
+  final String movementDate;
+  final String? reason;
 
-  Purchase({
-    this.id,
+  InventoryMovement({
+    this.movementId,
     required this.productId,
-    required this.quantityPurchased,
-    required this.unitPrice,
-    required this.totalPrice,
-    required this.purchaseDate,
+    required this.userId,
+    required this.movementType,
+    required this.quantity,
+    this.unitPrice,
+    required this.movementDate,
+    this.reason,
   });
 
-  factory Purchase.fromMap(Map<String, dynamic> map) {
-    return Purchase(
-      id: map['Purchase_ID'],
+  factory InventoryMovement.fromMap(Map<String, dynamic> map) {
+    return InventoryMovement(
+      movementId: map['Movement_ID'],
       productId: map['Product_ID'],
-      quantityPurchased: map['Quantity_Purchased'],
+      userId: map['User_ID'],
+      movementType: map['Movement_Type'],
+      quantity: map['Quantity'],
       unitPrice: map['Unit_Price'],
-      totalPrice: map['Total_Price'],
-      purchaseDate: map['Purchase_Date'],
+      movementDate: map['Movement_Date'],
+      reason: map['Reason'],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'Purchase_ID': id,
+      'Movement_ID': movementId,
       'Product_ID': productId,
-      'Quantity_Purchased': quantityPurchased,
+      'User_ID': userId,
+      'Movement_Type': movementType,
+      'Quantity': quantity,
       'Unit_Price': unitPrice,
-      'Total_Price': totalPrice,
-      'Purchase_Date': purchaseDate,
-    };
-  }
-}
-
-class Transactions {
-  final int? id;
-  final String type;
-  final double amount;
-  final String date;
-  final String? description;
-
-  Transactions({
-    this.id,
-    required this.type,
-    required this.amount,
-    required this.date,
-    this.description,
-  });
-
-  factory Transactions.fromMap(Map<String, dynamic> map) {
-    return Transactions(
-      id: map['Transaction_ID'],
-      type: map['Type'],
-      amount: map['Amount'],
-      date: map['Date'],
-      description: map['Description'],
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'Transaction_ID': id,
-      'Type': type,
-      'Amount': amount,
-      'Date': date,
-      'Description': description,
+      'Movement_Date': movementDate,
+      'Reason': reason,
     };
   }
 }

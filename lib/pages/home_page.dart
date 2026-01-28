@@ -20,25 +20,23 @@ class _HomePageState extends State<HomePage> {
   
   // DAOs
   final ProductDao _productDao = ProductDao();
-  final SaleDao _saleDao = SaleDao();
+  final InventoryMovementDao _movementDao = InventoryMovementDao();
 
   // State variables for dashboard
   int _totalItems = 0;
   int _lowStockCount = 0;
   double _invValue = 0.0;
-  int _salesTodayCount = 0;
-  double _salesTodayValue = 0.0;
+  double _salesToday = 0.0;
   double _profitToday = 0.0;
   
-  // Recent Activity (Polymorphic list: Sale or Product)
-  List<dynamic> _recentActivity = [];
-  List<dynamic> _allActivity = [];
+  // Recent Activity
+  List<InventoryMovement> _recentActivity = [];
   final Map<int, Product> _productCache = {}; 
   
   // Search
   final TextEditingController _searchController = TextEditingController();
-  List<Product> _allProducts = []; // Keep for stats calculation
-  List<dynamic> _searchResults = [];
+  List<Product> _allProducts = []; 
+  List<InventoryMovement> _searchResults = [];
   bool _isSearching = false;
 
   bool _isLoading = true;
@@ -61,15 +59,9 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _isSearching = query.isNotEmpty;
       if (_isSearching) {
-        _searchResults = _allActivity.where((item) {
-          if (item is Product) {
-             return item.name.toLowerCase().contains(query) || 
-                    (item.productCode?.toLowerCase().contains(query) ?? false);
-          } else if (item is Sale) {
-             final product = _productCache[item.productId];
-             return product?.name.toLowerCase().contains(query) ?? false;
-          }
-          return false;
+        _searchResults = _recentActivity.where((item) {
+           final product = _productCache[item.productId];
+           return product?.name.toLowerCase().contains(query) ?? false;
         }).toList();
       }
     });
@@ -80,7 +72,7 @@ class _HomePageState extends State<HomePage> {
     
     try {
       final products = await _productDao.getProducts();
-      final sales = await _saleDao.getSales();
+      final movements = await _movementDao.getMovements();
       
       _allProducts = products;
       
@@ -91,9 +83,10 @@ class _HomePageState extends State<HomePage> {
       
       _productCache.clear();
       for (var p in products) {
-        totalItems += p.stockQuantity;
-        invValue += p.purchasePrice * p.stockQuantity;
-        if (p.stockQuantity <= p.lowStockThreshold) {
+        int stock = p.currentStock ?? 0;
+        totalItems += stock;
+        invValue += p.purchasePrice * stock;
+        if (stock <= p.lowStockThreshold) {
           lowStock++;
         }
         if (p.id != null) {
@@ -103,51 +96,33 @@ class _HomePageState extends State<HomePage> {
 
       // Calculate Today's Stats
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      int salesCount = 0;
-      double salesValue = 0;
-      double profit = 0;
+      double salesToday = 0;
+      double profitToday = 0;
       
-      for (var s in sales) {
-        if (s.saleDate.startsWith(todayStr)) {
-          salesCount += s.quantitySold;
-          salesValue += s.totalPrice;
-          
-          final productKey = s.productId;
-          if (_productCache.containsKey(productKey)) {
-             final product = _productCache[productKey]!;
-             profit += (s.unitPrice - product.purchasePrice) * s.quantitySold;
+      for (var m in movements) {
+        if (m.movementDate.startsWith(todayStr)) {
+          if (m.movementType == 'OUT') {
+            salesToday += (m.quantity * (m.unitPrice ?? 0));
+            
+            // Calculate Profit
+            final product = _productCache[m.productId];
+            if (product != null) {
+              double costPrice = product.purchasePrice;
+              double salePrice = m.unitPrice ?? 0;
+              profitToday += (salePrice - costPrice) * m.quantity;
+            }
           }
         }
       }
-
-      // Merge Recent Activity
-      List<dynamic> activity = [];
-      activity.addAll(sales);
-      
-      // Add products as activity (based on dateAdded)
-      for (var p in products) {
-        if (p.dateAdded != null) {
-          activity.add(p);
-        }
-      }
-      
-      activity.sort((a, b) {
-        String dateA = a is Sale ? a.saleDate : (a as Product).dateAdded!;
-        String dateB = b is Sale ? b.saleDate : (b as Product).dateAdded!;
-        return dateB.compareTo(dateA); // Descending
-      });
-      
-      _allActivity = activity;
 
       if (mounted) {
         setState(() {
           _totalItems = totalItems;
           _lowStockCount = lowStock;
           _invValue = invValue;
-          _salesTodayCount = salesCount;
-          _salesTodayValue = salesValue;
-          _profitToday = profit;
-          _recentActivity = activity.take(10).toList();
+          _salesToday = salesToday;
+          _profitToday = profitToday;
+          _recentActivity = movements.take(10).toList();
           _isLoading = false;
         });
       }
@@ -218,7 +193,7 @@ class _HomePageState extends State<HomePage> {
                             const SizedBox(height: 16),
                             _isLoading 
                                 ? const SizedBox() 
-                                : _buildRecentActivityList(),
+                                : _buildRecentActivityList(_recentActivity),
                           ],
                         ),
                       ),
@@ -254,19 +229,7 @@ class _HomePageState extends State<HomePage> {
     if (_searchResults.isEmpty) {
       return const Center(child: Text('No activity found'));
     }
-    return ListView.builder(
-      itemCount: _searchResults.length,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemBuilder: (context, index) {
-        final item = _searchResults[index];
-        if (item is Sale) {
-           return _buildSaleItem(item);
-        } else if (item is Product) {
-           return _buildProductAddedItem(item);
-        }
-        return const SizedBox();
-      },
-    );
+    return _buildRecentActivityList(_searchResults);
   }
 
   Widget _buildHeader() {
@@ -362,20 +325,20 @@ class _HomePageState extends State<HomePage> {
               child: _buildDashboardCard(
                 icon: Icons.attach_money,
                 iconColor: Colors.green,
-                toolTip: "Today's Profit",
-                value: '\$${_profitToday.toStringAsFixed(2)}',
-                subtitle: "Today's Profit",
+                toolTip: "Sales Today",
+                value: '\$${_salesToday.toStringAsFixed(2)}',
+                subtitle: "Today's Sale",
                 trend: null,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildDashboardCard(
-                icon: Icons.shopping_bag_outlined,
+                icon: Icons.show_chart,
                 iconColor: Colors.purple,
-                toolTip: "Sales Today",
-                value: '\$${_salesTodayValue.toStringAsFixed(2)}',
-                subtitle: "Sales Today",
+                toolTip: "Profit Today",
+                value: '\$${_profitToday.toStringAsFixed(2)}',
+                subtitle: "Profit",
                 trend: null,
               ),
             ),
@@ -498,8 +461,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildRecentActivityList() {
-    if (_recentActivity.isEmpty) {
+  Widget _buildRecentActivityList(List<InventoryMovement> movements) {
+    if (movements.isEmpty) {
        return const Center(
          child: Padding(
            padding: EdgeInsets.all(16.0),
@@ -509,44 +472,42 @@ class _HomePageState extends State<HomePage> {
     }
     
     return Column(
-      children: _recentActivity.map((item) {
-        if (item is Sale) {
-           return _buildSaleItem(item);
-        } else if (item is Product) {
-           return _buildProductAddedItem(item);
-        }
-        return const SizedBox();
+      children: movements.map((item) {
+        return _buildMovementItem(item);
       }).toList(),
     );
   }
   
-  Widget _buildSaleItem(Sale sale) {
-    final product = _productCache[sale.productId];
-    String timeAgo = _getTimeAgo(sale.saleDate);
+  Widget _buildMovementItem(InventoryMovement movement) {
+    final product = _productCache[movement.productId];
+    String timeAgo = _getTimeAgo(movement.movementDate);
+    
+    String action = '';
+    IconData icon = Icons.history;
+    Color color = Colors.grey;
+    
+    if (movement.movementType == 'IN') {
+      action = 'Stock In: +${movement.quantity}';
+      icon = Icons.arrow_downward;
+      color = Colors.green;
+    } else if (movement.movementType == 'OUT') {
+      action = 'Stock Out: -${movement.quantity}';
+      icon = Icons.arrow_upward;
+      color = Colors.red;
+    } else {
+      action = 'Adjustment: ${movement.quantity}';
+      icon = Icons.tune;
+      color = Colors.orange;
+    }
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: _buildActivityItem(
         item: product?.name ?? 'Unknown Product',
-        action: 'Sold ${sale.quantitySold} units',
+        action: action,
         time: timeAgo,
-        icon: Icons.shopping_bag,
-        color: Colors.teal,
-      ),
-    );
-  }
-
-  Widget _buildProductAddedItem(Product product) {
-    String timeAgo = _getTimeAgo(product.dateAdded ?? DateTime.now().toIso8601String());
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: _buildActivityItem(
-        item: product.name,
-        action: 'Added ${product.stockQuantity} to stock',
-        time: timeAgo,
-        icon: Icons.add_box,
-        color: Colors.blue,
+        icon: icon,
+        color: color,
       ),
     );
   }
