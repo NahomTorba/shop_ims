@@ -605,17 +605,6 @@ class _HomePageState extends State<HomePage> {
         return Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.category),
-              title: const Text('Add Category'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddCategoryPage()),
-                ).then((_) => _loadDashboardData());
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.add_box),
               title: const Text('Add Product'),
               onTap: () {
@@ -623,6 +612,17 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddProductPage()),
+                ).then((_) => _loadDashboardData());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('Add Category'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddCategoryPage()),
                 ).then((_) => _loadDashboardData());
               },
             ),

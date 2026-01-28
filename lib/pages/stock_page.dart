@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shop_ims/models/models.dart';
+import 'package:shop_ims/pages/add_category_page.dart';
 import 'package:shop_ims/services/dao.dart';
 import 'package:shop_ims/pages/add_product_page.dart';
 
@@ -50,9 +51,9 @@ class _StockPageState extends State<StockPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Error loading data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       }
     }
   }
@@ -72,9 +73,12 @@ class _StockPageState extends State<StockPage> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredProducts = _allProducts.where((product) {
-        final matchesCategory = _selectedCategory == null || product.categoryId == _selectedCategory!.id;
-        final matchesQuery = product.name.toLowerCase().contains(query) || 
-                             (product.productCode?.toLowerCase().contains(query) ?? false);
+        final matchesCategory =
+            _selectedCategory == null ||
+            product.categoryId == _selectedCategory!.id;
+        final matchesQuery =
+            product.name.toLowerCase().contains(query) ||
+            (product.productCode?.toLowerCase().contains(query) ?? false);
         return matchesCategory && matchesQuery;
       }).toList();
     });
@@ -85,7 +89,9 @@ class _StockPageState extends State<StockPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Product'),
-        content: Text('Are you sure you want to delete ${product.name}? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete ${product.name}? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -114,89 +120,130 @@ class _StockPageState extends State<StockPage> {
       MaterialPageRoute(builder: (context) => AddProductPage(product: product)),
     ).then((_) => _loadData()); // Refresh on return
   }
-  
+
   void _showProductDetails(Product product) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
-         padding: const EdgeInsets.all(24),
-         child: Column(
-           mainAxisSize: MainAxisSize.min,
-           crossAxisAlignment: CrossAxisAlignment.start,
-           children: [
-             Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-               children: [
-                 Expanded(child: Text(product.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-                 IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-               ],
-             ),
-             const SizedBox(height: 8),
-             Text('Code: ${product.productCode ?? 'N/A'}', style: TextStyle(color: Colors.grey[600])),
-             const SizedBox(height: 16),
-             _buildDetailRow('Stock:', '${product.currentStock ?? 0}', 
-                 valueColor: (product.currentStock ?? 0) <= 5 ? Colors.orange : Colors.black87),
-             _buildDetailRow('Sale Price:', '\$${product.salePrice.toStringAsFixed(2)}'),
-             _buildDetailRow('Cost Price:', '\$${product.purchasePrice.toStringAsFixed(2)}'),
-             _buildDetailRow('Category:', _getCategoryName(product.categoryId)),
-             if (product.description != null && product.description!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(product.description!, style: TextStyle(color: Colors.grey[800])),
-             ],
-             
-             const SizedBox(height: 32),
-             Row(
-               children: [
-                 Expanded(
-                   child: OutlinedButton.icon(
-                     onPressed: () {
-                       Navigator.pop(context);
-                       _deleteProduct(product);
-                     },
-                     icon: const Icon(Icons.delete_outline, color: Colors.red),
-                     label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                     style: OutlinedButton.styleFrom(
-                       side: const BorderSide(color: Colors.red),
-                       padding: const EdgeInsets.symmetric(vertical: 12),
-                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                     ),
-                   ),
-                 ),
-                 const SizedBox(width: 16),
-                 Expanded(
-                   child: ElevatedButton.icon(
-                     onPressed: () {
-                         Navigator.pop(context);
-                         _editProduct(product);
-                     },
-                     icon: const Icon(Icons.edit, color: Colors.white),
-                     label: const Text('Edit'),
-                     style: ElevatedButton.styleFrom(
-                       backgroundColor: const Color(0xFF2D7697),
-                       foregroundColor: Colors.white,
-                       padding: const EdgeInsets.symmetric(vertical: 12),
-                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                     ),
-                   ),
-                 ),
-               ],
-             ),
-           ],
-         ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Code: ${product.productCode ?? 'N/A'}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow(
+              'Stock:',
+              '${product.currentStock ?? 0}',
+              valueColor: (product.currentStock ?? 0) <= 5
+                  ? Colors.orange
+                  : Colors.black87,
+            ),
+            _buildDetailRow(
+              'Sale Price:',
+              '\$${product.salePrice.toStringAsFixed(2)}',
+            ),
+            _buildDetailRow(
+              'Cost Price:',
+              '\$${product.purchasePrice.toStringAsFixed(2)}',
+            ),
+            _buildDetailRow('Category:', _getCategoryName(product.categoryId)),
+            if (product.description != null &&
+                product.description!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Description:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                product.description!,
+                style: TextStyle(color: Colors.grey[800]),
+              ),
+            ],
+
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _deleteProduct(product);
+                    },
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    label: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editProduct(product);
+                    },
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    label: const Text('Edit'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D7697),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
-  
+
   String _getCategoryName(int? id) {
-     if (id == null) return 'N/A';
-     try {
-       return _categories.firstWhere((c) => c.id == id).name;
-     } catch (e) {
-       return 'Unknown';
-     }
+    if (id == null) return 'N/A';
+    try {
+      return _categories.firstWhere((c) => c.id == id).name;
+    } catch (e) {
+      return 'Unknown';
+    }
   }
 
   Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
@@ -205,8 +252,14 @@ class _StockPageState extends State<StockPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-          Text(value, style: TextStyle(fontSize: 16, color: valueColor ?? Colors.black87)),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          ),
+          Text(
+            value,
+            style: TextStyle(fontSize: 16, color: valueColor ?? Colors.black87),
+          ),
         ],
       ),
     );
@@ -217,7 +270,10 @@ class _StockPageState extends State<StockPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Stock Management', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Stock Management',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -225,43 +281,46 @@ class _StockPageState extends State<StockPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-               // Search Bar
-               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search Bar
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        icon: Icon(Icons.search, color: Colors.grey),
+                        hintText: 'Search stock...',
+                        border: InputBorder.none,
                       ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      icon: Icon(Icons.search, color: Colors.grey),
-                      hintText: 'Search stock...',
-                      border: InputBorder.none,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                // Categories
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('Categories', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: Text(
+                    'Categories',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
@@ -290,49 +349,99 @@ class _StockPageState extends State<StockPage> {
                           padding: const EdgeInsets.all(16),
                           itemCount: _filteredProducts.length,
                           itemBuilder: (context, index) {
-                             final product = _filteredProducts[index];
-                             return Card(
-                               margin: const EdgeInsets.only(bottom: 12),
-                               elevation: 2,
-                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                               child: ListTile(
-                                  contentPadding: const EdgeInsets.all(16),
-                                  title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 4),
-                                      Text('\$${product.salePrice.toStringAsFixed(2)}'),
-                                      const SizedBox(height: 4),
-                                      Text('Stock: ${product.currentStock ?? 0}', 
-                                          style: TextStyle(color: (product.currentStock ?? 0) <= 5 ? Colors.orange : Colors.green)),
-                                    ],
+                            final product = _filteredProducts[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(16),
+                                title: Text(
+                                  product.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.edit_outlined, color: Colors.grey),
-                                    onPressed: () => _editProduct(product),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '\$${product.salePrice.toStringAsFixed(2)}',
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Stock: ${product.currentStock ?? 0}',
+                                      style: TextStyle(
+                                        color: (product.currentStock ?? 0) <= 5
+                                            ? Colors.orange
+                                            : Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Colors.grey,
                                   ),
-                                  onTap: () => _showProductDetails(product),
-                               ),
-                             );
+                                  onPressed: () => _editProduct(product),
+                                ),
+                                onTap: () => _showProductDetails(product),
+                              ),
+                            );
                           },
-                      ),
+                        ),
                 ),
-            ],
-          ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddProductPage()),
-          ).then((_) => _loadData());
+          showModalBottomSheet(
+            context: context,
+            builder: (context) {
+              return Wrap(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add_box),
+                    title: const Text('Add Product'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddProductPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.category),
+                    title: const Text('Add Category'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddCategoryPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          );
         },
         backgroundColor: const Color(0xFF2D7697),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
-  
+
   Widget _buildCategoryChip(Category? category, String label) {
     bool isSelected = _selectedCategory?.id == category?.id;
     return ChoiceChip(
@@ -340,7 +449,7 @@ class _StockPageState extends State<StockPage> {
       selected: isSelected,
       onSelected: (bool selected) {
         if (selected) {
-           _onCategorySelected(category);
+          _onCategorySelected(category);
         }
       },
       selectedColor: const Color(0xFF2D7697),
@@ -348,7 +457,7 @@ class _StockPageState extends State<StockPage> {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Colors.transparent)
+        side: const BorderSide(color: Colors.transparent),
       ),
     );
   }
