@@ -28,7 +28,6 @@ A robust Flutter-based mobile application designed to streamline shop management
 |:---:|:---:|:---:|
 | ![Dashboard Screenshot](assets/screenshots/dashboard_placeholder.png) | ![Inventory Screenshot](assets/screenshots/inventory_placeholder.png) | ![Sales Screenshot](assets/screenshots/sales_placeholder.png) |
 
-*(Note: Screenshots are placeholders. Please add actual app screenshots to an `assets/screenshots` folder.)*
 
 ## Tech Stack
 
