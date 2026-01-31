@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 6,
       onConfigure: (db) async {
         return db.execute('PRAGMA foreign_keys = ON');
       },
@@ -35,6 +35,10 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       // Version 2: Add Date_Added column to Product table
       await db.execute('ALTER TABLE Product ADD COLUMN Date_Added TEXT');
+    }
+    if (oldVersion < 6) {
+      // Version 6: Add Triggers and Views
+      await _createTriggersAndViews(db);
     }
   }
 
@@ -112,12 +116,125 @@ class DatabaseHelper {
         Unit_Price REAL,
         Movement_Date TEXT NOT NULL,
         Reason TEXT,
-        FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID),
+        FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID) ON DELETE CASCADE,
         FOREIGN KEY (User_ID) REFERENCES User(User_ID)
       )
     ''');
 
     await batch.commit(noResult: true);
+    
+    // Create Triggers and Views
+    await _createTriggersAndViews(db);
+  }
+
+  static Future<void> _createTriggersAndViews(Database db) async {
+    // 1. Trigger: After Product Insert - Initialize Stock
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS after_product_insert
+      AFTER INSERT ON Product
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO Stock (Product_ID, Quantity, Last_Updated)
+        VALUES (NEW.Product_ID, 0, datetime('now'));
+      END;
+    ''');
+
+    // 2. Trigger: Before Inventory Movement Insert - Validation
+    // Check if stock record exists
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS validate_stock_exists_before_movement
+      BEFORE INSERT ON Inventory_Movement
+      FOR EACH ROW
+      BEGIN
+        SELECT RAISE(ABORT, 'Stock record does not exist for this product.')
+        WHERE NOT EXISTS (SELECT 1 FROM Stock WHERE Product_ID = NEW.Product_ID);
+      END;
+    ''');
+
+    // Check for insufficient stock on OUT
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS validate_stock_quantity_before_out
+      BEFORE INSERT ON Inventory_Movement
+      FOR EACH ROW
+      WHEN NEW.Movement_Type = 'OUT'
+      BEGIN
+        SELECT RAISE(ABORT, 'Insufficient stock: cannot remove more items than available.')
+        FROM Stock
+        WHERE Product_ID = NEW.Product_ID AND Quantity < NEW.Quantity;
+      END;
+    ''');
+
+    // 3. Triggers: After Inventory Movement Insert - Update Stock
+    // SQLite triggers don't support IF/ELSEIF, so we use WHEN clauses
+    
+    // Handle IN
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS update_stock_after_in
+      AFTER INSERT ON Inventory_Movement
+      FOR EACH ROW
+      WHEN NEW.Movement_Type = 'IN'
+      BEGIN
+        UPDATE Stock
+        SET Quantity = Quantity + NEW.Quantity,
+            Last_Updated = datetime('now')
+        WHERE Product_ID = NEW.Product_ID;
+      END;
+    ''');
+
+    // Handle OUT
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS update_stock_after_out
+      AFTER INSERT ON Inventory_Movement
+      FOR EACH ROW
+      WHEN NEW.Movement_Type = 'OUT'
+      BEGIN
+        UPDATE Stock
+        SET Quantity = Quantity - NEW.Quantity,
+            Last_Updated = datetime('now')
+        WHERE Product_ID = NEW.Product_ID;
+      END;
+    ''');
+
+    // Handle ADJUSTMENT
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS update_stock_after_adjustment
+      AFTER INSERT ON Inventory_Movement
+      FOR EACH ROW
+      WHEN NEW.Movement_Type = 'ADJUSTMENT'
+      BEGIN
+        UPDATE Stock
+        SET Quantity = NEW.Quantity,
+            Last_Updated = datetime('now')
+        WHERE Product_ID = NEW.Product_ID;
+      END;
+    ''');
+
+    // 4. View: Inventory Status
+    await db.execute('''
+      CREATE VIEW IF NOT EXISTS v_inventory_status AS
+      SELECT
+        p.Product_ID,
+        p.Product_Name,
+        c.Category_Name,
+        s.Quantity,
+        p.Low_Stock_Threshold
+      FROM Product p
+      JOIN Stock s ON p.Product_ID = s.Product_ID
+      LEFT JOIN Category c ON p.Category_ID = c.Category_ID
+    ''');
+
+    // 5. View: Low Stock Products
+    await db.execute('''
+      CREATE VIEW IF NOT EXISTS v_low_stock_products AS
+      SELECT
+        p.Product_ID,
+        p.Product_Name,
+        s.Quantity,
+        p.Low_Stock_Threshold
+      FROM Product p
+      JOIN Stock s ON p.Product_ID = s.Product_ID
+      WHERE s.Quantity <= p.Low_Stock_Threshold
+    ''');
   }
 
   // General insert method
