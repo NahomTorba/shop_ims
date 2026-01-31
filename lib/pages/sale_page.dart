@@ -312,7 +312,7 @@ class _SalePageState extends State<SalePage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 4),
-                                        Text('Price: \$${product.salePrice}'),
+                                        Text('Price: ${product.salePrice} ETB'),
                                         const SizedBox(height: 4),
                                         Text('Stock: $stock', 
                                             style: TextStyle(color: stock <= 5 ? Colors.red : Colors.green)),

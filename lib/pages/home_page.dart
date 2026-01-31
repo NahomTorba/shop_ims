@@ -4,6 +4,7 @@ import 'package:shop_ims/pages/add_product_page.dart';
 import 'package:shop_ims/pages/more_reports.dart';
 import 'package:shop_ims/pages/sale_page.dart';
 import 'package:shop_ims/pages/stock_page.dart';
+import 'package:shop_ims/pages/low_stock_page.dart';
 import 'package:shop_ims/services/dao.dart';
 import 'package:shop_ims/models/models.dart';
 import 'package:intl/intl.dart';
@@ -305,6 +306,12 @@ class _HomePageState extends State<HomePage> {
                     ? 'Needs attention'
                     : 'Good standing',
                 footerColor: _lowStockCount > 0 ? Colors.orange : Colors.green,
+                onTap: () {
+                   Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LowStockPage()),
+                  );
+                },
               ),
             ),
           ],
@@ -349,9 +356,9 @@ class _HomePageState extends State<HomePage> {
     bool trendUp = true,
     String? footer,
     Color? footerColor,
+    VoidCallback? onTap,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -363,43 +370,54 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: iconColor),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                if (footer != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    footer,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: footerColor,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            child: Icon(icon, color: iconColor),
           ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
-          if (footer != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              footer,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: footerColor,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

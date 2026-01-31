@@ -241,3 +241,11 @@ class InventoryMovementDao {
     return result.map((json) => InventoryMovement.fromMap(json)).toList();
   }
 }
+class ReportDao {
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+
+  Future<List<Map<String, dynamic>>> getLowStockProducts() async {
+    final db = await _dbHelper.database;
+    return await db.query('v_low_stock_products');
+  }
+}

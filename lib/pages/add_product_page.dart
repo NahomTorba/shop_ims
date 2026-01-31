@@ -93,7 +93,7 @@ class _AddProductPageState extends State<AddProductPage> {
         _salePriceController.text.isEmpty ||
         _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields (including Category)')),
+        const SnackBar(content: Text('Please fill all required fields (*)')),
       );
       return;
     }
@@ -173,14 +173,14 @@ class _AddProductPageState extends State<AddProductPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                         _buildLabel('Product Name'),
+                         _buildLabel('Product Name *'),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _nameController,
                           decoration: _inputDecoration('e.g. Fountain Pen Blue'),
                         ),
                         const SizedBox(height: 16),
-                        _buildLabel('Category*'),
+                        _buildLabel('Category *'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<Category>(
                           initialValue: _selectedCategory,
@@ -208,7 +208,7 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionHeader('PRICING & STOCK'),
+                  _buildSectionHeader('PRICING DETAILS'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -219,7 +219,7 @@ class _AddProductPageState extends State<AddProductPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel('Cost Price'),
+                              _buildLabel('Cost Price *'),
                               const SizedBox(height: 8),
                               TextField(
                                 controller: _costPriceController,
@@ -238,7 +238,7 @@ class _AddProductPageState extends State<AddProductPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel('Sale Price'),
+                              _buildLabel('Sale Price *'),
                               const SizedBox(height: 8),
                               TextField(
                                 controller: _salePriceController,

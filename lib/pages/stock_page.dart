@@ -15,13 +15,13 @@ class _StockPageState extends State<StockPage> {
   final ProductDao _productDao = ProductDao();
   final CategoryDao _categoryDao = CategoryDao();
   final InventoryMovementDao _movementDao = InventoryMovementDao();
-  
+
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
   List<Category> _categories = [];
   Category? _selectedCategory;
   final TextEditingController _searchController = TextEditingController();
-  
+
   bool _isLoading = true;
 
   @override
@@ -42,7 +42,7 @@ class _StockPageState extends State<StockPage> {
     try {
       final products = await _productDao.getProducts();
       final categories = await _categoryDao.getCategories();
-      
+
       setState(() {
         _allProducts = products;
         _categories = categories;
@@ -121,31 +121,60 @@ class _StockPageState extends State<StockPage> {
       MaterialPageRoute(builder: (context) => AddProductPage(product: product)),
     ).then((_) => _loadData()); // Refresh on return
   }
-  
+
   void _showRestockDialog(Product product) {
     final quantityController = TextEditingController();
-    final costController = TextEditingController(text: product.purchasePrice.toString());
-    
+    final costController = TextEditingController(
+      text: product.purchasePrice.toString(),
+    );
+    final saleController = TextEditingController(
+      text: product.salePrice.toString(),
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Restock ${product.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: quantityController,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Quantity to Add', hintText: 'e.g., 50'),
-            ),
-             const SizedBox(height: 16),
-            TextField(
-              controller: costController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Unit Cost', hintText: 'Cost per item'),
-            ),
-          ],
+        title: Text(
+          'Restock ${product.name}',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Quantity to Add',
+                  hintText: 'e.g., 50',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: costController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Unit Cost',
+                  hintText: 'Cost per item',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: saleController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Sale Price',
+                  hintText: 'Selling price per item',
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -154,12 +183,14 @@ class _StockPageState extends State<StockPage> {
           ),
           ElevatedButton(
             onPressed: () {
-               final qty = int.tryParse(quantityController.text);
-               final cost = double.tryParse(costController.text);
-               if (qty != null && qty > 0 && cost != null) {
-                 Navigator.pop(context);
-                 _restockProduct(product, qty, cost);
-               }
+              final qty = int.tryParse(quantityController.text);
+              final cost = double.tryParse(costController.text);
+              final sale = double.tryParse(saleController.text);
+
+              if (qty != null && qty > 0 && cost != null && sale != null) {
+                Navigator.pop(context);
+                _restockProduct(product, qty, cost, sale);
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D7697),
@@ -172,9 +203,34 @@ class _StockPageState extends State<StockPage> {
     );
   }
 
-  Future<void> _restockProduct(Product product, int quantity, double cost) async {
+  Future<void> _restockProduct(
+    Product product,
+    int quantity,
+    double cost,
+    double sale,
+  ) async {
     setState(() => _isLoading = true);
     try {
+      // 1. Update Product Prices if changed
+      if (product.purchasePrice != cost || product.salePrice != sale) {
+        final updatedProduct = Product(
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          purchasePrice: cost,
+          salePrice: sale,
+          productCode: product.productCode,
+          expirationDate: product.expirationDate,
+          lowStockThreshold: product.lowStockThreshold,
+          categoryId: product.categoryId,
+          supplierId: product.supplierId,
+          dateAdded: product.dateAdded,
+          currentStock: product.currentStock,
+        );
+        await _productDao.updateProduct(updatedProduct);
+      }
+
+      // 2. Insert Inventory Movement
       final movement = InventoryMovement(
         productId: product.id!,
         userId: 1, // Default Admin
@@ -184,20 +240,26 @@ class _StockPageState extends State<StockPage> {
         movementDate: DateTime.now().toIso8601String(),
         reason: 'Restock via Stock Page',
       );
-      
+
       await _movementDao.insertMovement(movement);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restocked ${product.name} successfully!'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text('Restocked ${product.name} successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
       _loadData();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error restocking: $e'), backgroundColor: Colors.red),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error restocking: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -396,7 +458,7 @@ class _StockPageState extends State<StockPage> {
                 ),
                 const SizedBox(height: 16),
 
-               // Categories
+                // Categories
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
@@ -422,7 +484,7 @@ class _StockPageState extends State<StockPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Product List
                 Expanded(
                   child: _filteredProducts.isEmpty
@@ -452,7 +514,7 @@ class _StockPageState extends State<StockPage> {
                                   children: [
                                     const SizedBox(height: 4),
                                     Text(
-                                      '\$${product.salePrice.toStringAsFixed(2)}',
+                                      '${product.salePrice.toStringAsFixed(2)} ETB',
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -468,9 +530,13 @@ class _StockPageState extends State<StockPage> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                     IconButton(
-                                      icon: const Icon(Icons.add_shopping_cart, color: Colors.blue),
-                                      onPressed: () => _showRestockDialog(product),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.add_shopping_cart,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: () =>
+                                          _showRestockDialog(product),
                                       tooltip: 'Restock',
                                     ),
                                     IconButton(
