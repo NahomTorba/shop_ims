@@ -17,7 +17,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  
+
   // DAOs
   final ProductDao _productDao = ProductDao();
   final InventoryMovementDao _movementDao = InventoryMovementDao();
@@ -28,14 +28,14 @@ class _HomePageState extends State<HomePage> {
   double _invValue = 0.0;
   double _salesToday = 0.0;
   double _profitToday = 0.0;
-  
+
   // Recent Activity
   List<InventoryMovement> _recentActivity = [];
-  final Map<int, Product> _productCache = {}; 
-  
+  final Map<int, Product> _productCache = {};
+
   // Search
   final TextEditingController _searchController = TextEditingController();
-  List<Product> _allProducts = []; 
+  List<Product> _allProducts = [];
   List<InventoryMovement> _searchResults = [];
   bool _isSearching = false;
 
@@ -47,21 +47,21 @@ class _HomePageState extends State<HomePage> {
     _loadDashboardData();
     _searchController.addListener(_onSearchChanged);
   }
-  
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
-  
+
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _isSearching = query.isNotEmpty;
       if (_isSearching) {
         _searchResults = _recentActivity.where((item) {
-           final product = _productCache[item.productId];
-           return product?.name.toLowerCase().contains(query) ?? false;
+          final product = _productCache[item.productId];
+          return product?.name.toLowerCase().contains(query) ?? false;
         }).toList();
       }
     });
@@ -69,18 +69,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadDashboardData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final products = await _productDao.getProducts();
       final movements = await _movementDao.getMovements();
-      
+
       _allProducts = products;
-      
+
       // Calculate Total Items & Inventory Value
       int totalItems = 0;
       double invValue = 0;
       int lowStock = 0;
-      
+
       _productCache.clear();
       for (var p in products) {
         int stock = p.currentStock ?? 0;
@@ -98,12 +98,12 @@ class _HomePageState extends State<HomePage> {
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       double salesToday = 0;
       double profitToday = 0;
-      
+
       for (var m in movements) {
         if (m.movementDate.startsWith(todayStr)) {
           if (m.movementType == 'OUT') {
             salesToday += (m.quantity * (m.unitPrice ?? 0));
-            
+
             // Calculate Profit
             final product = _productCache[m.productId];
             if (product != null) {
@@ -131,53 +131,53 @@ class _HomePageState extends State<HomePage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
   void _onItemTapped(int index) {
-      if (index == 1) {
-         // Stock Page
-         Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const StockPage()),
-        ).then((_) => _loadDashboardData());
-      } else if (index == 2) {
-        // Sale Page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SalePage()),
-        ).then((_) => _loadDashboardData()); 
-      } else if(index == 3){
-        // more reports page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ReportsPage()),
-        ).then((_) => _loadDashboardData());
-      } else {
-        setState(() {
-          _selectedIndex = index;
-        });
-      }
+    if (index == 1) {
+      // Stock Page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const StockPage()),
+      ).then((_) => _loadDashboardData());
+    } else if (index == 2) {
+      // Sale Page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SalePage()),
+      ).then((_) => _loadDashboardData());
+    } else if (index == 3) {
+      // more reports page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ReportsPage()),
+      ).then((_) => _loadDashboardData());
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], 
+      backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDashboardData,
           child: Column(
             children: [
-               Padding(
-                 padding: const EdgeInsets.all(16.0),
-                 child: _buildHeader(),
-               ),
-               Padding(
-                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                 child: _buildSearchBar(),
-               ),
-               const SizedBox(height: 16),
-               Expanded(
-                 child: _isSearching 
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildHeader(),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildSearchBar(),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _isSearching
                     ? _buildSearchResults()
                     : SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -185,19 +185,21 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _isLoading 
-                                ? const Center(child: CircularProgressIndicator()) 
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
                                 : _buildDashboardGrid(),
                             const SizedBox(height: 24),
                             _buildRecentActivityHeader(),
                             const SizedBox(height: 16),
-                            _isLoading 
-                                ? const SizedBox() 
+                            _isLoading
+                                ? const SizedBox()
                                 : _buildRecentActivityList(_recentActivity),
                           ],
                         ),
                       ),
-               ),
+              ),
             ],
           ),
         ),
@@ -210,8 +212,14 @@ class _HomePageState extends State<HomePage> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_outlined), label: 'STOCK'),
-          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'SALE'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_turned_in_outlined),
+            label: 'STOCK',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.point_of_sale),
+            label: 'SALE',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'MORE'),
         ],
       ),
@@ -240,11 +248,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             const CircleAvatar(
               radius: 20,
-              child: Icon(
-                Icons.account_circle_outlined,
-                size: 40,
-                color: Colors.black87,
-              ),
+              child: Icon(Icons.account_circle_outlined, size: 40),
             ),
             const SizedBox(width: 12),
             Column(
@@ -269,21 +273,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ],
-        ),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.notifications_none, color: Colors.black87),
         ),
       ],
     );
@@ -312,7 +301,9 @@ class _HomePageState extends State<HomePage> {
                 toolTip: "Low Stock",
                 value: _lowStockCount.toString(),
                 subtitle: 'Low Stock',
-                footer: _lowStockCount > 0 ? 'Needs attention' : 'Good standing',
+                footer: _lowStockCount > 0
+                    ? 'Needs attention'
+                    : 'Good standing',
                 footerColor: _lowStockCount > 0 ? Colors.orange : Colors.green,
               ),
             ),
@@ -326,7 +317,7 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.attach_money,
                 iconColor: Colors.green,
                 toolTip: "Sales Today",
-                value: '\$${_salesToday.toStringAsFixed(2)}',
+                value: '${_salesToday.toStringAsFixed(2)} ETB',
                 subtitle: "Today's Sale",
                 trend: null,
               ),
@@ -337,7 +328,7 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.show_chart,
                 iconColor: Colors.purple,
                 toolTip: "Profit Today",
-                value: '\$${_profitToday.toStringAsFixed(2)}',
+                value: '${_profitToday.toStringAsFixed(2)} ETB',
                 subtitle: "Profit",
                 trend: null,
               ),
@@ -395,14 +386,11 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           if (footer != null) ...[
-             const SizedBox(height: 8),
-             Text(
+            const SizedBox(height: 8),
+            Text(
               footer,
               style: TextStyle(
                 fontSize: 12,
@@ -410,7 +398,7 @@ class _HomePageState extends State<HomePage> {
                 color: footerColor,
               ),
             ),
-          ]
+          ],
         ],
       ),
     );
@@ -453,39 +441,36 @@ class _HomePageState extends State<HomePage> {
             color: Colors.black87,
           ),
         ),
-        TextButton(
-          onPressed: () {},
-          child: const Text('View all'),
-        ),
+        TextButton(onPressed: () {}, child: const Text('View all')),
       ],
     );
   }
 
   Widget _buildRecentActivityList(List<InventoryMovement> movements) {
     if (movements.isEmpty) {
-       return const Center(
-         child: Padding(
-           padding: EdgeInsets.all(16.0),
-           child: Text("No recent activity"),
-         ),
-       );
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text("No recent activity"),
+        ),
+      );
     }
-    
+
     return Column(
       children: movements.map((item) {
         return _buildMovementItem(item);
       }).toList(),
     );
   }
-  
+
   Widget _buildMovementItem(InventoryMovement movement) {
     final product = _productCache[movement.productId];
     String timeAgo = _getTimeAgo(movement.movementDate);
-    
+
     String action = '';
     IconData icon = Icons.history;
     Color color = Colors.grey;
-    
+
     if (movement.movementType == 'IN') {
       action = 'Stock In: +${movement.quantity}';
       icon = Icons.arrow_downward;
@@ -499,7 +484,7 @@ class _HomePageState extends State<HomePage> {
       icon = Icons.tune;
       color = Colors.orange;
     }
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: _buildActivityItem(
@@ -511,22 +496,22 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-  
+
   String _getTimeAgo(String dateStr) {
-     try {
-        final date = DateTime.parse(dateStr);
-        final diff = DateTime.now().difference(date);
-        if (diff.inMinutes < 60) {
-          return '${diff.inMinutes} MINS AGO';
-        } else if (diff.inHours < 24) {
-          return '${diff.inHours} HRS AGO';
-        } else if (diff.inDays == 1) {
-          return 'YESTERDAY';
-        } else {
-          return '${diff.inDays} DAYS AGO';
-        }
-    } catch(e) {
-        return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final diff = DateTime.now().difference(date);
+      if (diff.inMinutes < 60) {
+        return '${diff.inMinutes} MINS AGO';
+      } else if (diff.inHours < 24) {
+        return '${diff.inHours} HRS AGO';
+      } else if (diff.inDays == 1) {
+        return 'YESTERDAY';
+      } else {
+        return '${diff.inDays} DAYS AGO';
+      }
+    } catch (e) {
+      return '';
     }
   }
 
@@ -611,7 +596,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AddProductPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const AddProductPage(),
+                  ),
                 ).then((_) => _loadDashboardData());
               },
             ),
@@ -622,7 +609,9 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AddCategoryPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const AddCategoryPage(),
+                  ),
                 ).then((_) => _loadDashboardData());
               },
             ),

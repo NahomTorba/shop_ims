@@ -14,6 +14,7 @@ class StockPage extends StatefulWidget {
 class _StockPageState extends State<StockPage> {
   final ProductDao _productDao = ProductDao();
   final CategoryDao _categoryDao = CategoryDao();
+  final InventoryMovementDao _movementDao = InventoryMovementDao();
   
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
@@ -119,6 +120,87 @@ class _StockPageState extends State<StockPage> {
       context,
       MaterialPageRoute(builder: (context) => AddProductPage(product: product)),
     ).then((_) => _loadData()); // Refresh on return
+  }
+  
+  void _showRestockDialog(Product product) {
+    final quantityController = TextEditingController();
+    final costController = TextEditingController(text: product.purchasePrice.toString());
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Restock ${product.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Quantity to Add', hintText: 'e.g., 50'),
+            ),
+             const SizedBox(height: 16),
+            TextField(
+              controller: costController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Unit Cost', hintText: 'Cost per item'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+               final qty = int.tryParse(quantityController.text);
+               final cost = double.tryParse(costController.text);
+               if (qty != null && qty > 0 && cost != null) {
+                 Navigator.pop(context);
+                 _restockProduct(product, qty, cost);
+               }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2D7697),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Restock'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restockProduct(Product product, int quantity, double cost) async {
+    setState(() => _isLoading = true);
+    try {
+      final movement = InventoryMovement(
+        productId: product.id!,
+        userId: 1, // Default Admin
+        movementType: 'IN',
+        quantity: quantity,
+        unitPrice: cost,
+        movementDate: DateTime.now().toIso8601String(),
+        reason: 'Restock via Stock Page',
+      );
+      
+      await _movementDao.insertMovement(movement);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restocked ${product.name} successfully!'), backgroundColor: Colors.green),
+        );
+      }
+      _loadData();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error restocking: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _showProductDetails(Product product) {
@@ -383,12 +465,22 @@ class _StockPageState extends State<StockPage> {
                                     ),
                                   ],
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: () => _editProduct(product),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                     IconButton(
+                                      icon: const Icon(Icons.add_shopping_cart, color: Colors.blue),
+                                      onPressed: () => _showRestockDialog(product),
+                                      tooltip: 'Restock',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () => _editProduct(product),
+                                    ),
+                                  ],
                                 ),
                                 onTap: () => _showProductDetails(product),
                               ),
